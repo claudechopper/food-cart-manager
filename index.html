@@ -701,10 +701,19 @@ function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
 let state = load();
 
 // One-time seed of default workers (v1 + v2 batches)
+const SEED_LOCATIONS_KEY = 'fcm_seeded_locations_v1';
+const DEFAULT_LOCATIONS = ['Zoo playground','Zoo bottom of hill','Restaurant corner towards Zoo','Restaurant corner (Back behind)','Pond #1','Pond #2','Pond #3'];
+
 const SEED_WORKERS_KEY_V1 = 'fcm_seeded_workers_v1';
 const SEED_WORKERS_KEY_V2 = 'fcm_seeded_workers_v2';
 const DEFAULT_WORKERS_V1 = ['Art','Chris','Eli','Sam','Wagone','Christina','Nada','J Harrison','Stepan','Corey'];
 const DEFAULT_WORKERS_V2 = ['Richard','Henry','Taras','Carl c','Francisco','DaveK','Kevin','Doni','Cory','Marizia','Juan Paublo','Stephanie','Preonka','Nicki (Tony)','Millie'];
+if (!localStorage.getItem(SEED_LOCATIONS_KEY)) {
+  for (const loc of DEFAULT_LOCATIONS) { if (!state.locations.includes(loc)) state.locations.push(loc); }
+  localStorage.setItem(SEED_LOCATIONS_KEY, '1');
+  localStorage.setItem(KEY, JSON.stringify(state));
+}
+
 if (!localStorage.getItem(SEED_WORKERS_KEY_V1)) {
   for (const w of DEFAULT_WORKERS_V1) { if (!state.workers.includes(w)) state.workers.push(w); }
   localStorage.setItem(SEED_WORKERS_KEY_V1, '1');
