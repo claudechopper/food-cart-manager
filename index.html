@@ -126,6 +126,19 @@
   input:focus, select:focus, textarea:focus { border-color: #007aff; }
   textarea { min-height: 70px; resize: vertical; }
 
+  /* Required-field red pulse — removed once user engages */
+  .needs-input {
+    border-color: #ff3b30 !important;
+    border-width: 3px !important;
+    box-shadow: 0 0 0 4px rgba(255, 59, 48, 0.25);
+    animation: redPulse 1.4s ease-in-out infinite;
+  }
+  @keyframes redPulse {
+    0%, 100% { box-shadow: 0 0 0 4px rgba(255, 59, 48, 0.25); }
+    50%      { box-shadow: 0 0 0 9px rgba(255, 59, 48, 0.10); }
+  }
+  .needs-input:focus { animation: none; }
+
   .btn {
     width: 100%;
     padding: 16px;
@@ -453,6 +466,8 @@ function renderEntryView(){
   fillSelect('e-location', state.locations, '— Select location —');
   fillSelect('e-worker', state.workers, '— Select worker —');
 
+  refreshRequiredGlow();
+
   const wrap = $('e-items');
   wrap.innerHTML = '';
   if (state.items.length === 0){
@@ -542,7 +557,26 @@ function clearForm(){
   $('e-location').value = ''; $('e-worker').value = '';
   $('e-start').value = ''; $('e-end').value = ''; $('e-notes').value = '';
   document.querySelectorAll('#e-items input[data-item]').forEach(i => i.value = '');
+  refreshRequiredGlow();
 }
+
+const REQUIRED_FIELDS = ['e-location','e-worker','e-start','e-end'];
+function refreshRequiredGlow(){
+  REQUIRED_FIELDS.forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    const v = (el.value || '').trim();
+    const filled = v && v !== '__add__';
+    el.classList.toggle('needs-input', !filled);
+  });
+}
+REQUIRED_FIELDS.forEach(id => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener('input', refreshRequiredGlow);
+    el.addEventListener('change', refreshRequiredGlow);
+  }
+});
 
 function hoursBetween(a,b){
   if (!a || !b) return null;
