@@ -20,116 +20,65 @@
   }
   .wrap { max-width: 720px; margin: 0 auto; padding: 12px; }
 
-  /* === HEADER === */
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 6px 4px 14px;
-  }
+  /* HEADER */
+  .header { display: flex; align-items: center; justify-content: space-between; padding: 6px 4px 14px; }
   .header h1 { font-size: 1.4rem; margin: 0; }
   .header .icons { display: flex; gap: 8px; }
   .icon-btn {
-    background: #fff;
-    border: 2px solid #d1d1d6;
-    border-radius: 12px;
-    padding: 8px 12px;
-    font-size: 1.3rem;
-    cursor: pointer;
-    line-height: 1;
+    background: #fff; border: 2px solid #d1d1d6; border-radius: 12px;
+    padding: 8px 12px; font-size: 1.3rem; cursor: pointer; line-height: 1;
   }
   .icon-btn.active { background: #111; color: #fff; border-color: #111; }
 
-  /* === PRIMARY TABS === */
+  /* PRIMARY TABS */
   .primary-tabs {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 4px;
-    background: #e5e5ea;
-    padding: 4px;
-    border-radius: 12px;
-    margin-bottom: 10px;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;
+    background: #e5e5ea; padding: 4px; border-radius: 12px; margin-bottom: 10px;
   }
   .primary-tab {
-    padding: 10px 4px;
-    text-align: center;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.78rem;
-    cursor: pointer;
-    color: #333;
-    border: none;
-    background: transparent;
-    line-height: 1.2;
+    padding: 10px 4px; text-align: center; border-radius: 8px;
+    font-weight: 600; font-size: 0.78rem; cursor: pointer; color: #333;
+    border: none; background: transparent; line-height: 1.2;
   }
   .primary-tab .emoji { display: block; font-size: 1.4rem; margin-bottom: 2px; }
   .primary-tab.active { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
 
-  /* === SECONDARY TABS === */
+  /* SUB TABS */
   .sub-tabs {
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    padding: 6px 2px 10px;
-    margin-bottom: 4px;
+    display: flex; gap: 6px; overflow-x: auto;
+    padding: 6px 2px 10px; margin-bottom: 4px;
     -webkit-overflow-scrolling: touch;
   }
   .sub-tab {
-    flex: 0 0 auto;
-    min-width: 56px;
-    padding: 12px 10px;
-    border-radius: 12px;
-    font-weight: 800;
-    font-size: 1.1rem;
-    border: 3px solid transparent;
-    cursor: pointer;
-    text-align: center;
-    color: #fff;
-    background: var(--tab-color, #888);
-    opacity: 0.55;
-    transition: opacity 0.15s, transform 0.1s;
+    flex: 0 0 auto; min-width: 56px; padding: 12px 10px;
+    border-radius: 12px; font-weight: 800; font-size: 1.1rem;
+    border: 3px solid transparent; cursor: pointer; text-align: center;
+    color: #fff; background: var(--tab-color, #888);
+    opacity: 0.55; transition: opacity 0.15s, transform 0.1s;
   }
   .sub-tab.active { opacity: 1; transform: scale(1.05); border-color: #111; }
 
-  /* === FORM === */
+  /* FORM */
   .cart-banner {
-    background: var(--banner-color, #007aff);
-    color: #fff;
-    padding: 14px 16px;
-    border-radius: 14px;
-    margin-bottom: 14px;
-    font-weight: 700;
-    font-size: 1.2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    background: var(--banner-color, #007aff); color: #fff;
+    padding: 14px 16px; border-radius: 14px; margin-bottom: 14px;
+    font-weight: 700; font-size: 1.2rem;
+    display: flex; align-items: center; justify-content: space-between;
   }
   .cart-banner .small { font-size: 0.85rem; opacity: 0.9; font-weight: 500; }
 
-  label {
-    display: block;
-    font-weight: 700;
-    margin: 14px 0 6px 0;
-    font-size: 1rem;
-  }
+  label { display: block; font-weight: 700; margin: 14px 0 6px 0; font-size: 1rem; }
   input[type="text"], input[type="number"], input[type="date"], input[type="time"], select, textarea {
-    width: 100%;
-    padding: 14px;
-    font-size: 1.1rem;
-    border: 2px solid #d1d1d6;
-    border-radius: 10px;
-    background: #fff;
-    color: #111;
-    font-family: inherit;
-    outline: none;
+    width: 100%; padding: 14px; font-size: 1.1rem;
+    border: 2px solid #d1d1d6; border-radius: 10px;
+    background: #fff; color: #111; font-family: inherit; outline: none;
   }
   input:focus, select:focus, textarea:focus { border-color: #007aff; }
   textarea { min-height: 70px; resize: vertical; }
 
-  /* Required-field red pulse — removed once user engages */
+  /* required field glow */
   .needs-input {
-    border-color: #ff3b30 !important;
-    border-width: 3px !important;
+    border-color: #ff3b30 !important; border-width: 3px !important;
     box-shadow: 0 0 0 4px rgba(255, 59, 48, 0.25);
     animation: redPulse 1.4s ease-in-out infinite;
   }
@@ -139,122 +88,20 @@
   }
   .needs-input:focus { animation: none; }
 
-  /* === GLOBAL DATE BAR === */
+  /* date bar + master glow */
   .date-bar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: #fff;
-    border-radius: 14px;
-    padding: 10px 14px;
-    margin-bottom: 12px;
-    border: 2px solid #d1d1d6;
+    display: flex; align-items: center; gap: 10px;
+    background: #fff; border-radius: 14px; padding: 10px 14px;
+    margin-bottom: 10px; border: 2px solid #d1d1d6;
   }
-  .date-bar .date-label {
-    font-weight: 800;
-    font-size: 1rem;
-    white-space: nowrap;
-  }
-  /* date display button (opens custom calendar) */
+  .date-bar .date-label { font-weight: 800; font-size: 1rem; white-space: nowrap; }
   .date-display {
-    flex: 1;
-    font-size: 1.1rem;
-    font-weight: 700;
-    padding: 12px 14px;
-    border: 3px solid #d1d1d6;
-    border-radius: 10px;
-    background: #fff;
-    color: #111;
-    cursor: pointer;
-    text-align: left;
-    font-family: inherit;
+    flex: 1; font-size: 1.1rem; font-weight: 700; padding: 12px 14px;
+    border: 3px solid #d1d1d6; border-radius: 10px; background: #fff;
+    color: #111; cursor: pointer; text-align: left; font-family: inherit;
   }
-
-  /* === CUSTOM CALENDAR OVERLAY === */
-  .dp-overlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.45);
-    z-index: 2000;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-  }
-  .dp-sheet {
-    background: #f5f5f7;
-    border-radius: 22px 22px 0 0;
-    width: 100%;
-    max-width: 640px;
-    padding: 10px 8px 30px;
-    max-height: 94vh;
-    overflow-y: auto;
-  }
-  .dp-handle {
-    width: 40px; height: 5px; border-radius: 3px;
-    background: #ccc; margin: 0 auto 14px;
-  }
-  .dp-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-    padding: 0 4px;
-  }
-  .dp-nav {
-    background: #fff;
-    border: 2px solid #d1d1d6;
-    border-radius: 12px;
-    font-size: 2.2rem;
-    font-weight: 700;
-    padding: 6px 22px;
-    cursor: pointer;
-    line-height: 1;
-    color: #111;
-  }
-  .dp-month-label { font-size: 1.6rem; font-weight: 800; text-align: center; }
-  .dp-weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 3px;
-    margin-bottom: 4px;
-  }
-  .dp-weekdays span {
-    text-align: center;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #888;
-    padding: 4px 0;
-  }
-  .dp-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 3px;
-    margin-bottom: 14px;
-  }
-  .dp-day {
-    aspect-ratio: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    font-weight: 700;
-    border-radius: 12px;
-    cursor: pointer;
-    background: #fff;
-    border: 2px solid transparent;
-    -webkit-tap-highlight-color: transparent;
-    user-select: none;
-  }
-  .dp-day:active { transform: scale(0.92); }
-  .dp-day.other-month { color: #d0d0d5; background: transparent; pointer-events: none; }
-  .dp-day.dp-today { border-color: #007aff; color: #007aff; }
-  .dp-day.dp-selected { background: #007aff; color: #fff; border-color: #007aff; font-weight: 800; }
-  .dp-actions { display: flex; gap: 10px; padding: 0 4px; }
-  .dp-actions .btn { margin-top: 0; }
-  /* Hard glow — really loud */
   .date-master-glow {
-    border-color: #ff3b30 !important;
-    border-width: 4px !important;
+    border-color: #ff3b30 !important; border-width: 4px !important;
     background: #fff5f5 !important;
     box-shadow:
       0 0 0 6px rgba(255, 59, 48, 0.35),
@@ -262,75 +109,142 @@
     animation: redPulseHard 1.1s ease-in-out infinite;
   }
   @keyframes redPulseHard {
-    0%, 100% {
-      box-shadow:
-        0 0 0 6px rgba(255, 59, 48, 0.35),
-        0 0 22px rgba(255, 59, 48, 0.55);
-    }
-    50% {
-      box-shadow:
-        0 0 0 12px rgba(255, 59, 48, 0.18),
-        0 0 36px rgba(255, 59, 48, 0.30);
-    }
+    0%,100% { box-shadow: 0 0 0 6px rgba(255,59,48,0.35), 0 0 22px rgba(255,59,48,0.55); }
+    50%     { box-shadow: 0 0 0 12px rgba(255,59,48,0.18), 0 0 36px rgba(255,59,48,0.30); }
   }
   .date-master-glow:focus { animation: none; }
 
-  /* Loud export buttons */
-  .btn.export {
-    background: #34c759;
-    color: #fff;
-    font-size: 1.05rem;
-    padding: 14px;
-    margin-top: 0;
+  /* LOCK ALL button */
+  .lock-all-btn {
+    width: 100%; padding: 18px; font-size: 1.15rem; font-weight: 800;
+    border: none; border-radius: 14px; cursor: pointer;
+    background: #ff3b30; color: #fff; margin-bottom: 14px;
+    box-shadow: 0 4px 12px rgba(255, 59, 48, 0.3);
+    letter-spacing: 0.5px;
   }
-  .btn.export.json { background: #007aff; }
+  .lock-all-btn:active { opacity: 0.85; }
 
+  /* generic buttons */
   .btn {
-    width: 100%;
-    padding: 16px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    margin-top: 12px;
-    background: #007aff;
-    color: #fff;
+    width: 100%; padding: 16px; font-size: 1.1rem; font-weight: 700;
+    border: none; border-radius: 12px; cursor: pointer;
+    margin-top: 12px; background: #007aff; color: #fff;
   }
   .btn:active { opacity: 0.7; }
   .btn.secondary { background: #e5e5ea; color: #111; }
   .btn.danger { background: #ff3b30; color: #fff; }
   .btn.success { background: #34c759; color: #fff; }
   .btn.small { padding: 10px 14px; font-size: 0.95rem; width: auto; margin-top: 0; }
+  .btn.export { background: #34c759; color: #fff; font-size: 1.05rem; padding: 14px; margin-top: 0; }
+  .btn.export.json { background: #007aff; }
 
   .row { display: flex; gap: 8px; }
   .row > * { flex: 1; }
 
   .card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 14px;
-    margin-bottom: 12px;
-    border: 1px solid #e5e5ea;
+    background: #fff; border-radius: 12px; padding: 14px;
+    margin-bottom: 12px; border: 1px solid #e5e5ea;
   }
   .card h3 { margin: 0 0 6px 0; font-size: 1.1rem; }
   .card .meta { color: #666; font-size: 0.9rem; margin-bottom: 8px; }
 
-  .item-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 0;
-    border-bottom: 1px solid #f0f0f0;
+  /* SECTION boxes (morning + evening) */
+  .section {
+    border-radius: 14px; padding: 14px;
+    margin-bottom: 14px; border: 2px solid;
   }
-  .item-row:last-child { border-bottom: none; }
-  .item-name { flex: 1; font-weight: 600; }
-  .item-row input[type="number"] { width: 90px; padding: 10px; text-align: center; }
+  .section h3 {
+    margin: 0 0 12px 0; font-size: 1.15rem; font-weight: 800;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section.morning { background: #fff8e6; border-color: #ffd24d; }
+  .section.morning h3 { color: #b87800; }
+  .section.evening { background: #e6f0ff; border-color: #6699ff; }
+  .section.evening h3 { color: #1a4dcc; }
+  .section.trucks  { background: #f0f0f5; border-color: #c5c5cc; }
 
+  /* item rows with live $ */
+  .item-line {
+    display: grid;
+    grid-template-columns: 1fr 70px 95px;
+    gap: 8px; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.06);
+  }
+  .item-line:last-child { border-bottom: none; }
+  .item-line .name { font-weight: 700; font-size: 0.95rem; line-height: 1.2; }
+  .item-line .name .price { display: block; font-size: 0.78rem; font-weight: 500; color: #666; }
+  .item-line input[type="number"] {
+    padding: 10px; text-align: center; font-size: 1rem; font-weight: 700;
+  }
+  .item-line .total {
+    text-align: right; font-weight: 800; font-size: 1rem;
+    color: #111;
+  }
+
+  .grand-total {
+    margin-top: 12px; padding: 12px 14px;
+    background: rgba(0,0,0,0.06); border-radius: 10px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-weight: 800; font-size: 1.15rem;
+  }
+  .grand-total .amount { font-size: 1.4rem; }
+
+  /* reconciliation badge */
+  .recon-box {
+    margin-top: 14px; padding: 14px;
+    border-radius: 12px; text-align: center;
+    font-weight: 800; font-size: 1.1rem;
+    border: 3px solid;
+  }
+  .recon-box.match { background: #e8f8ec; border-color: #34c759; color: #1a7a36; }
+  .recon-box.diff  { background: #ffe8e6; border-color: #ff3b30; color: #b00020; }
+  .recon-box .formula {
+    display: block; font-size: 0.85rem; font-weight: 500;
+    margin-top: 6px; color: inherit; opacity: 0.8;
+  }
+
+  /* tips: distinct color + italic */
+  .tips-box {
+    background: linear-gradient(135deg, #fff4cc 0%, #ffe89e 100%);
+    border: 3px solid #d4a017;
+    border-radius: 14px; padding: 14px;
+    margin-bottom: 14px;
+    font-style: italic;
+  }
+  .tips-box label { color: #6b4f00; margin-top: 0; font-style: italic; font-weight: 800; }
+  .tips-box input {
+    background: #fffdf5; border-color: #d4a017;
+    color: #6b4f00; font-style: italic; font-weight: 700;
+  }
+  .tips-box .split {
+    margin-top: 8px; font-size: 0.95rem; color: #6b4f00;
+    font-style: italic;
+  }
+  .tips-box .note { font-size: 0.78rem; color: #997000; margin-top: 4px; font-style: italic; }
+
+  /* workers list */
+  .worker-row {
+    display: grid;
+    grid-template-columns: 1fr 90px 90px auto;
+    gap: 6px; align-items: center;
+    margin-bottom: 8px;
+  }
+  .worker-row select, .worker-row input { padding: 10px; font-size: 0.95rem; }
+  .worker-row .x {
+    background: none; border: 2px solid #ff3b30; color: #ff3b30;
+    border-radius: 8px; padding: 8px 10px; font-size: 1rem; cursor: pointer;
+    font-weight: 800;
+  }
+  .add-worker-btn {
+    width: 100%; padding: 10px; font-size: 0.95rem; font-weight: 600;
+    border: 2px dashed #007aff; background: transparent; color: #007aff;
+    border-radius: 10px; cursor: pointer; margin-top: 4px;
+  }
+
+  /* settings */
   .settings-list { background: #fff; border-radius: 10px; padding: 4px 0; margin-bottom: 8px; }
   .settings-row {
-    display: flex; align-items: center;
-    padding: 12px; gap: 8px;
+    display: flex; align-items: center; padding: 12px; gap: 8px;
     border-bottom: 1px solid #f0f0f0;
   }
   .settings-row:last-child { border-bottom: none; }
@@ -346,7 +260,10 @@
   details { background: #fff; border-radius: 10px; padding: 10px 14px; margin-bottom: 10px; border: 1px solid #e5e5ea; }
   summary { font-weight: 700; cursor: pointer; padding: 4px 0; }
 
-  .pill { display: inline-block; background: #34c759; color: #fff; padding: 3px 10px; border-radius: 999px; font-size: 0.8rem; }
+  .pill {
+    display: inline-block; background: #34c759; color: #fff;
+    padding: 3px 10px; border-radius: 999px; font-size: 0.8rem;
+  }
   .empty { text-align: center; color: #888; padding: 30px 10px; }
   .filter-bar { display: flex; gap: 8px; margin-bottom: 12px; }
   .filter-bar input { flex: 1; }
@@ -360,6 +277,50 @@
     opacity: 0; transition: opacity 0.2s; pointer-events: none;
   }
   .toast.show { opacity: 1; }
+
+  /* date picker overlay */
+  .dp-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.45); z-index: 2000;
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  .dp-sheet {
+    background: #f5f5f7; border-radius: 22px 22px 0 0;
+    width: 100%; max-width: 640px; padding: 10px 8px 30px;
+    max-height: 94vh; overflow-y: auto;
+  }
+  .dp-handle { width: 40px; height: 5px; border-radius: 3px; background: #ccc; margin: 0 auto 14px; }
+  .dp-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 0 4px; }
+  .dp-nav {
+    background: #fff; border: 2px solid #d1d1d6; border-radius: 12px;
+    font-size: 2.2rem; font-weight: 700; padding: 6px 22px; cursor: pointer;
+    line-height: 1; color: #111;
+  }
+  .dp-month-label { font-size: 1.6rem; font-weight: 800; text-align: center; }
+  .dp-weekdays {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    gap: 3px; margin-bottom: 4px;
+  }
+  .dp-weekdays span {
+    text-align: center; font-size: 0.85rem;
+    font-weight: 700; color: #888; padding: 4px 0;
+  }
+  .dp-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    gap: 3px; margin-bottom: 14px;
+  }
+  .dp-day {
+    aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; font-weight: 700; border-radius: 12px; cursor: pointer;
+    background: #fff; border: 2px solid transparent;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+  }
+  .dp-day:active { transform: scale(0.92); }
+  .dp-day.other-month { color: #d0d0d5; background: transparent; pointer-events: none; }
+  .dp-day.dp-today { border-color: #007aff; color: #007aff; }
+  .dp-day.dp-selected { background: #007aff; color: #fff; border-color: #007aff; font-weight: 800; }
+  .dp-actions { display: flex; gap: 10px; padding: 0 4px; }
+  .dp-actions .btn { margin-top: 0; }
 </style>
 </head>
 <body>
@@ -368,18 +329,21 @@
   <div class="header">
     <h1>🍦 Food Cart Manager</h1>
     <div class="icons">
-      <button class="icon-btn" id="icon-export" title="Export CSV">💾</button>
+      <button class="icon-btn" id="icon-export" title="Export">💾</button>
       <button class="icon-btn" id="icon-saved" title="Saved entries">📋</button>
       <button class="icon-btn" id="icon-settings" title="Settings">⚙️</button>
     </div>
   </div>
 
-  <!-- GLOBAL DATE — applies to every entry until changed -->
+  <!-- GLOBAL DATE -->
   <div class="date-bar">
     <span class="date-label">🗓️ Date:</span>
     <button type="button" id="date-display" class="date-display">Tap to set date</button>
     <input type="hidden" id="global-date">
   </div>
+
+  <!-- LOCK & SAVE ALL -->
+  <button class="lock-all-btn" id="btn-lock-all">🔒 LOCK & SAVE ALL ENTRIES</button>
 
   <!-- Custom calendar bottom sheet -->
   <div id="dp-overlay" class="dp-overlay" style="display:none">
@@ -408,34 +372,7 @@
   <!-- ENTRY VIEW -->
   <div id="view-entry">
     <div class="cart-banner" id="cart-banner"></div>
-
-    <label>Location</label>
-    <select id="e-location"></select>
-
-    <label>Worker</label>
-    <select id="e-worker"></select>
-
-    <div class="row">
-      <div>
-        <label>Start time</label>
-        <input type="time" id="e-start">
-      </div>
-      <div>
-        <label>End time</label>
-        <input type="time" id="e-end">
-      </div>
-    </div>
-
-    <div id="e-inventory-section">
-      <label>Inventory sent out</label>
-      <div class="card" id="e-items"></div>
-    </div>
-
-    <label>Notes</label>
-    <textarea id="e-notes" placeholder="Anything worth noting..."></textarea>
-
-    <button class="btn success" id="btn-save">🔒 Lock & Save Entry</button>
-    <button class="btn secondary" id="btn-clear">Clear form</button>
+    <div id="entry-form-content"></div>
   </div>
 
   <!-- SAVED VIEW -->
@@ -455,7 +392,6 @@
   <!-- SETTINGS VIEW -->
   <div id="view-settings" style="display:none">
     <h2 style="margin:8px 0 12px">⚙️ Settings</h2>
-
     <details open>
       <summary>👥 Workers</summary>
       <div class="settings-list" id="list-workers"></div>
@@ -464,7 +400,6 @@
         <button class="btn small" onclick="addItem('workers','new-worker')">＋ Add</button>
       </div>
     </details>
-
     <details open>
       <summary>📍 Locations</summary>
       <div class="settings-list" id="list-locations"></div>
@@ -473,21 +408,17 @@
         <button class="btn small" onclick="addItem('locations','new-location')">＋ Add</button>
       </div>
     </details>
-
     <details>
       <summary>🚚 Cart names (per category)</summary>
       <div id="cart-name-editor"></div>
     </details>
-
-    <details open>
-      <summary>🍔 Inventory items</summary>
-      <div class="settings-list" id="list-items"></div>
-      <div class="add-new-row">
-        <input type="text" id="new-item" placeholder="Item (e.g. Hotdog buns)">
-        <button class="btn small" onclick="addItem('items','new-item')">＋ Add</button>
+    <details>
+      <summary>💲 Inventory items & prices</summary>
+      <div style="font-size:0.9rem;color:#666;padding:10px 0">
+        Hardcoded for now. Edit the <code>PRICES</code> object in the file to change.
       </div>
+      <div id="prices-display"></div>
     </details>
-
     <details>
       <summary>⚠️ Danger zone</summary>
       <button class="btn danger" id="btn-wipe">Erase ALL data</button>
@@ -500,12 +431,15 @@
 <div class="toast" id="toast"></div>
 
 <script>
+//============================================================
+// CONSTANTS
+//============================================================
 const CATEGORIES = [
-  { key: 'novelty',    label: 'Novelty Carts',    emoji: '🍦', count: 8 },
-  { key: 'hotdog',     label: 'Hotdog Carts',     emoji: '🌭', count: 4 },
-  { key: 'fry',        label: 'Fry Truck',        emoji: '🍟', count: 1 },
-  { key: 'benjerry',   label: 'B&J Truck',        emoji: '🍨', count: 1 },
-  { key: 'softserve',  label: 'Soft Serve Truck', emoji: '🍦', count: 1 },
+  { key: 'novelty',    label: 'Novelty Carts',    emoji: '🍦' },
+  { key: 'hotdog',     label: 'Hotdog Carts',     emoji: '🌭' },
+  { key: 'fry',        label: 'Fry Truck',        emoji: '🍟' },
+  { key: 'benjerry',   label: 'B&J Truck',        emoji: '🍨' },
+  { key: 'softserve',  label: 'Soft Serve Truck', emoji: '🍦' },
 ];
 
 const NOVELTY_COLORS = ['#ff3b30','#ff9500','#ffcc00','#34c759','#00c7be','#007aff','#af52de','#ff2d92'];
@@ -518,7 +452,25 @@ function colorFor(catKey, idx){
   return SOLO_COLOR[catKey] || '#007aff';
 }
 
-const KEY = 'foodCartManager_v2';
+// Hardcoded inventory items + prices (per category)
+const PRICES = {
+  novelty: [
+    { name: 'Magnums',      price: 7 },
+    { name: 'Novelties',    price: 5 },
+    { name: 'I.C.Sandwich', price: 6 },
+    { name: 'Cones',        price: 6 },
+  ],
+  hotdog: [
+    { name: 'Hotdogs',      price: 6 },
+    { name: 'Sausage',      price: 7 },
+    { name: 'Water',        price: 3 },
+    { name: 'Pop (bottle)', price: 4 },
+    { name: 'Gatorade',     price: 4 },
+  ]
+};
+const HAS_INVENTORY = c => c === 'novelty' || c === 'hotdog';
+
+const KEY = 'foodCartManager_v3';
 const DEFAULTS = {
   workers: [],
   locations: [],
@@ -530,12 +482,6 @@ const DEFAULTS = {
     benjerry:  ['Ben & Jerry Truck'],
     softserve: ['Soft Serve Truck'],
   },
-  items: [
-    'Novelty ice cream (packaged)','Canned drinks','Bottled drinks',
-    'Hotdogs','Hotdog buns','French fry servings',
-    'Ben & Jerry pints','Soft serve cones','Soft serve cups',
-    'Napkins (packs)','Ice (bags)'
-  ],
   entries: []
 };
 
@@ -545,9 +491,11 @@ function load(){
     if (!raw) return structuredClone(DEFAULTS);
     const p = JSON.parse(raw);
     for (const k of Object.keys(DEFAULTS)) if (!(k in p)) p[k] = structuredClone(DEFAULTS[k]);
-    for (const c of CATEGORIES) if (!Array.isArray(p.carts?.[c.key])) {
-      p.carts = p.carts || {};
-      p.carts[c.key] = structuredClone(DEFAULTS.carts[c.key]);
+    for (const c of CATEGORIES) {
+      if (!Array.isArray(p.carts?.[c.key])) {
+        p.carts = p.carts || {};
+        p.carts[c.key] = structuredClone(DEFAULTS.carts[c.key]);
+      }
     }
     return p;
   } catch(e){ return structuredClone(DEFAULTS); }
@@ -569,7 +517,12 @@ function toast(msg){
 }
 function todayStamp(){ return new Date().toISOString().slice(0,10); }
 function activeCartName(){ return state.carts[activeCategory][activeCartIdx]; }
+function fmt(n){ return '$' + (Math.round((n||0) * 100) / 100).toFixed(2); }
+function num(v){ const n = parseFloat(v); return isNaN(n) ? 0 : n; }
 
+//============================================================
+// VIEW SWITCHING
+//============================================================
 function showView(v){
   activeView = v;
   $('view-entry').style.display    = v === 'entry'    ? '' : 'none';
@@ -583,10 +536,13 @@ function showView(v){
   if (v === 'settings') renderSettings();
   if (v === 'entry') renderEntryView();
 }
-
 $('icon-saved').addEventListener('click', () => showView(activeView === 'saved' ? 'entry' : 'saved'));
 $('icon-settings').addEventListener('click', () => showView(activeView === 'settings' ? 'entry' : 'settings'));
+$('icon-export').addEventListener('click', () => showView(activeView === 'saved' ? 'entry' : 'saved'));
 
+//============================================================
+// PRIMARY + SECONDARY TABS
+//============================================================
 function renderPrimaryTabs(){
   const wrap = $('primary-tabs');
   wrap.innerHTML = '';
@@ -605,7 +561,6 @@ function renderPrimaryTabs(){
     wrap.appendChild(btn);
   });
 }
-
 function renderSubTabs(){
   const wrap = $('sub-tabs');
   wrap.innerHTML = '';
@@ -626,6 +581,41 @@ function renderSubTabs(){
   wrap.style.display = (activeView === 'entry' && carts.length > 1) ? '' : 'none';
 }
 
+//============================================================
+// DRAFT ENTRIES (per date+cart)
+//============================================================
+function getOrCreateDraft(){
+  const date = $('global-date').value || todayStamp();
+  const cart = activeCartName();
+  let e = state.entries.find(x => x.date === date && x.cart === cart && !x.locked);
+  if (!e) {
+    e = {
+      id: Date.now() + '-' + Math.random().toString(36).slice(2,7),
+      date, cart, category: activeCategory,
+      location: '',
+      workers: [{ worker: '', start: '', end: '' }],
+      morning: {},  // itemName -> count
+      evening: {},  // itemName -> count (leftover)
+      cash: 0, debit: 0, tips: 0,
+      notes: '',
+      locked: false,
+      createdAt: new Date().toISOString()
+    };
+    state.entries.push(e);
+    save();
+  }
+  return e;
+}
+
+function updateDraft(updater){
+  const e = getOrCreateDraft();
+  updater(e);
+  save();
+}
+
+//============================================================
+// ENTRY VIEW (dynamic per category)
+//============================================================
 function renderEntryView(){
   const cartName = activeCartName() || '(no cart)';
   const color = colorFor(activeCategory, activeCartIdx);
@@ -633,141 +623,392 @@ function renderEntryView(){
   banner.style.setProperty('--banner-color', color);
   const cat = CATEGORIES.find(c => c.key === activeCategory);
   banner.innerHTML = `<span>${cat.emoji} ${escapeHtml(cartName)}</span>
-    <span class="small">Tap fields to log</span>`;
+    <span class="small">${HAS_INVENTORY(activeCategory) ? 'Morning + Evening' : 'Hours + cash record'}</span>`;
 
-  fillSelect('e-location', state.locations, '— Select location —');
-  fillSelect('e-worker', state.workers, '— Select worker —');
-
-  const hasInventory = ['novelty', 'hotdog'].includes(activeCategory);
-  $('e-inventory-section').style.display = hasInventory ? '' : 'none';
-
-  refreshRequiredGlow();
-
-  const wrap = $('e-items');
-  wrap.innerHTML = '';
-  if (state.items.length === 0){
-    wrap.innerHTML = '<div class="empty">No items yet. Add some in ⚙️ Settings.</div>';
-    return;
-  }
-  state.items.forEach(item => {
-    const row = document.createElement('div');
-    row.className = 'item-row';
-    row.innerHTML = `<div class="item-name">${escapeHtml(item)}</div>
-      <input type="number" min="0" step="1" data-item="${escapeHtml(item)}" placeholder="0">`;
-    wrap.appendChild(row);
-  });
+  const draft = getOrCreateDraft();
+  const wrap = $('entry-form-content');
+  wrap.innerHTML = renderFormHTML(draft);
+  attachFormHandlers(draft);
+  recalcAll();
 }
 
-function fillSelect(id, list, placeholder){
-  const sel = $(id);
-  const prev = sel.value;
-  sel.innerHTML = '';
-  const opt0 = document.createElement('option');
-  opt0.value = ''; opt0.textContent = placeholder;
-  sel.appendChild(opt0);
-  list.forEach(v => {
-    const o = document.createElement('option');
-    o.value = v; o.textContent = v;
-    sel.appendChild(o);
-  });
-  const addOpt = document.createElement('option');
-  addOpt.value = '__add__';
-  addOpt.textContent = '＋ Add new…';
-  sel.appendChild(addOpt);
-  if (list.includes(prev)) sel.value = prev;
+function renderFormHTML(e){
+  const locOptions = renderSelectOptions(state.locations, e.location);
+  const workerRows = e.workers.map((w, i) => renderWorkerRowHTML(w, i)).join('');
 
-  sel.onchange = () => {
-    if (sel.value === '__add__'){
-      const kind = id === 'e-location' ? 'locations' : 'workers';
-      const v = prompt(`Add new ${kind === 'locations' ? 'location' : 'worker'}:`);
-      if (v && v.trim()){
-        state[kind].push(v.trim());
-        save();
-        fillSelect(id, state[kind], placeholder);
-        sel.value = v.trim();
-      } else {
-        sel.value = '';
-      }
+  let html = `
+    <label>Location</label>
+    <select id="f-location" data-field="location">
+      <option value="">— Select location —</option>
+      ${locOptions}
+      <option value="__add_loc__">＋ Add new…</option>
+    </select>
+
+    <label>Workers on this shift</label>
+    <div id="workers-list">${workerRows}</div>
+    <button type="button" class="add-worker-btn" id="add-worker-btn">＋ Add another worker</button>
+  `;
+
+  if (HAS_INVENTORY(activeCategory)) {
+    const items = PRICES[activeCategory];
+    const morningRows = items.map(it => `
+      <div class="item-line">
+        <div class="name">${escapeHtml(it.name)}<span class="price">$${it.price.toFixed(2)} each</span></div>
+        <input type="number" inputmode="numeric" min="0" step="1" data-morning="${escapeHtml(it.name)}" data-price="${it.price}" placeholder="0" value="${e.morning[it.name] ?? ''}">
+        <div class="total" data-morning-total="${escapeHtml(it.name)}">$0.00</div>
+      </div>
+    `).join('');
+
+    const eveningRows = items.map(it => `
+      <div class="item-line">
+        <div class="name">${escapeHtml(it.name)}<span class="price">$${it.price.toFixed(2)} each</span></div>
+        <input type="number" inputmode="numeric" min="0" step="1" data-evening="${escapeHtml(it.name)}" data-price="${it.price}" placeholder="0" value="${e.evening[it.name] ?? ''}">
+        <div class="total" data-evening-total="${escapeHtml(it.name)}">$0.00</div>
+      </div>
+    `).join('');
+
+    html += `
+      <div class="section morning">
+        <h3>🌅 Morning — Inventory Out</h3>
+        ${morningRows}
+        <div class="grand-total">
+          <span>GRAND TOTAL OUT</span>
+          <span class="amount" id="morning-grand">$0.00</span>
+        </div>
+      </div>
+
+      <div class="section evening">
+        <h3>🌆 Evening — Reconcile</h3>
+        <label>A) Cash received</label>
+        <input type="number" inputmode="decimal" step="0.01" min="0" data-field="cash" placeholder="0.00" value="${e.cash || ''}">
+        <label>B) Debit received</label>
+        <input type="number" inputmode="decimal" step="0.01" min="0" data-field="debit" placeholder="0.00" value="${e.debit || ''}">
+        <label>C) Inventory leftover (recount)</label>
+        ${eveningRows}
+        <div class="grand-total">
+          <span>Leftover Value</span>
+          <span class="amount" id="leftover-grand">$0.00</span>
+        </div>
+        <div class="recon-box match" id="recon-box">
+          <span id="recon-status">✓ Balanced</span>
+          <span class="formula" id="recon-formula">Morning − Cash − Debit − Leftover = $0.00</span>
+        </div>
+      </div>
+    `;
+  } else {
+    // truck: just cash + debit recording
+    html += `
+      <div class="section trucks">
+        <h3>💵 Money received (record only)</h3>
+        <label>A) Cash received</label>
+        <input type="number" inputmode="decimal" step="0.01" min="0" data-field="cash" placeholder="0.00" value="${e.cash || ''}">
+        <label>B) Debit received</label>
+        <input type="number" inputmode="decimal" step="0.01" min="0" data-field="debit" placeholder="0.00" value="${e.debit || ''}">
+      </div>
+    `;
+  }
+
+  // tips section (all categories)
+  html += `
+    <div class="tips-box">
+      <label>D) Tips (recorded — not part of reconciliation)</label>
+      <input type="number" inputmode="decimal" step="0.01" min="0" data-field="tips" placeholder="0.00" value="${e.tips || ''}">
+      <div class="split" id="tips-split">Split: —</div>
+      <div class="note">Auto-split evenly across workers above.</div>
+    </div>
+    <label>Notes</label>
+    <textarea data-field="notes" placeholder="Anything worth noting...">${escapeHtml(e.notes || '')}</textarea>
+  `;
+
+  return html;
+}
+
+function renderWorkerRowHTML(w, i){
+  const opts = renderSelectOptions(state.workers, w.worker);
+  return `
+    <div class="worker-row" data-worker-row="${i}">
+      <select data-worker-field="worker" data-idx="${i}">
+        <option value="">— Select worker —</option>
+        ${opts}
+        <option value="__add_worker__">＋ Add new…</option>
+      </select>
+      <input type="time" data-worker-field="start" data-idx="${i}" value="${w.start || ''}" placeholder="Start">
+      <input type="time" data-worker-field="end" data-idx="${i}" value="${w.end || ''}" placeholder="End">
+      <button class="x" data-remove-worker="${i}" title="Remove">✕</button>
+    </div>
+  `;
+}
+
+function renderSelectOptions(list, selected){
+  return list.map(v => `<option value="${escapeHtml(v)}"${v === selected ? ' selected' : ''}>${escapeHtml(v)}</option>`).join('');
+}
+
+function attachFormHandlers(draft){
+  // Location
+  const loc = $('f-location');
+  loc.addEventListener('change', () => {
+    if (loc.value === '__add_loc__') {
+      const v = prompt('Add new location:');
+      if (v && v.trim()) {
+        state.locations.push(v.trim()); save();
+        renderEntryView();
+        return;
+      } else { loc.value = draft.location || ''; return; }
     }
-  };
+    updateDraft(e => e.location = loc.value);
+    refreshGlow();
+  });
+
+  // Workers (delegated)
+  $('workers-list').addEventListener('change', (ev) => {
+    const t = ev.target;
+    if (t.dataset.workerField) {
+      const idx = +t.dataset.idx;
+      const field = t.dataset.workerField;
+      if (field === 'worker' && t.value === '__add_worker__') {
+        const v = prompt('Add new worker:');
+        if (v && v.trim()) {
+          state.workers.push(v.trim()); save();
+          renderEntryView();
+          return;
+        } else { t.value = draft.workers[idx].worker || ''; return; }
+      }
+      updateDraft(e => { e.workers[idx][field] = t.value; });
+      recalcAll();
+      refreshGlow();
+    }
+  });
+  $('workers-list').addEventListener('input', (ev) => {
+    const t = ev.target;
+    if (t.dataset.workerField === 'start' || t.dataset.workerField === 'end') {
+      const idx = +t.dataset.idx;
+      updateDraft(e => { e.workers[idx][t.dataset.workerField] = t.value; });
+      refreshGlow();
+    }
+  });
+  $('workers-list').addEventListener('click', (ev) => {
+    const idx = ev.target.dataset.removeWorker;
+    if (idx !== undefined) {
+      updateDraft(e => {
+        if (e.workers.length > 1) e.workers.splice(+idx, 1);
+        else e.workers[0] = { worker: '', start: '', end: '' };
+      });
+      renderEntryView();
+    }
+  });
+  $('add-worker-btn').addEventListener('click', () => {
+    updateDraft(e => e.workers.push({ worker: '', start: '', end: '' }));
+    renderEntryView();
+  });
+
+  // Item count inputs (morning/evening)
+  document.querySelectorAll('[data-morning], [data-evening], [data-field]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      if (inp.dataset.morning !== undefined) {
+        updateDraft(e => { e.morning[inp.dataset.morning] = num(inp.value); });
+      } else if (inp.dataset.evening !== undefined) {
+        updateDraft(e => { e.evening[inp.dataset.evening] = num(inp.value); });
+      } else if (inp.dataset.field) {
+        const f = inp.dataset.field;
+        const v = (f === 'cash' || f === 'debit' || f === 'tips') ? num(inp.value) : inp.value;
+        updateDraft(e => e[f] = v);
+      }
+      recalcAll();
+    });
+  });
 }
 
-$('btn-save').addEventListener('click', () => {
-  const date = $('global-date').value;
-  const cart = activeCartName();
-  const location = $('e-location').value;
-  const worker = $('e-worker').value;
-  const start = $('e-start').value;
-  const end = $('e-end').value;
-  const notes = $('e-notes').value.trim();
+//============================================================
+// LIVE CALCULATIONS
+//============================================================
+function recalcAll(){
+  if (HAS_INVENTORY(activeCategory)) {
+    const items = PRICES[activeCategory];
+    let morningTotal = 0;
+    items.forEach(it => {
+      const inp = document.querySelector(`[data-morning="${cssEscape(it.name)}"]`);
+      const cnt = inp ? num(inp.value) : 0;
+      const total = cnt * it.price;
+      morningTotal += total;
+      const cell = document.querySelector(`[data-morning-total="${cssEscape(it.name)}"]`);
+      if (cell) cell.textContent = fmt(total);
+    });
+    const mg = $('morning-grand'); if (mg) mg.textContent = fmt(morningTotal);
 
-  if (!date || !cart || !location || !worker){
-    alert('Please fill date, location, and worker.');
+    let leftoverTotal = 0;
+    items.forEach(it => {
+      const inp = document.querySelector(`[data-evening="${cssEscape(it.name)}"]`);
+      const cnt = inp ? num(inp.value) : 0;
+      const total = cnt * it.price;
+      leftoverTotal += total;
+      const cell = document.querySelector(`[data-evening-total="${cssEscape(it.name)}"]`);
+      if (cell) cell.textContent = fmt(total);
+    });
+    const lg = $('leftover-grand'); if (lg) lg.textContent = fmt(leftoverTotal);
+
+    const cash = num(document.querySelector('[data-field="cash"]')?.value);
+    const debit = num(document.querySelector('[data-field="debit"]')?.value);
+    const diff = morningTotal - cash - debit - leftoverTotal;
+    const box = $('recon-box');
+    const status = $('recon-status');
+    const formula = $('recon-formula');
+    if (box) {
+      const matched = Math.abs(diff) < 0.005;
+      box.classList.toggle('match', matched);
+      box.classList.toggle('diff', !matched);
+      status.textContent = matched ? '✓ Balanced' : `⚠ Discrepancy: ${diff > 0 ? '+' : ''}${fmt(diff)}`;
+      formula.textContent = `${fmt(morningTotal)} − ${fmt(cash)} − ${fmt(debit)} − ${fmt(leftoverTotal)} = ${fmt(diff)}`;
+    }
+  }
+
+  // tips split
+  const tipsInp = document.querySelector('[data-field="tips"]');
+  const tips = tipsInp ? num(tipsInp.value) : 0;
+  const draft = state.entries.find(x =>
+    x.date === ($('global-date').value || todayStamp()) &&
+    x.cart === activeCartName() && !x.locked
+  );
+  const workersWithName = (draft?.workers || []).filter(w => (w.worker || '').trim());
+  const splitEl = $('tips-split');
+  if (splitEl) {
+    if (tips === 0) {
+      splitEl.textContent = 'Split: —';
+    } else if (workersWithName.length === 0) {
+      splitEl.textContent = 'Split: add a worker to calculate';
+    } else {
+      const each = tips / workersWithName.length;
+      splitEl.textContent = `Split: ${fmt(each)} per worker (${workersWithName.length} ${workersWithName.length === 1 ? 'worker' : 'workers'})`;
+    }
+  }
+}
+
+function cssEscape(s){ return String(s).replace(/(["\\])/g, '\\$1'); }
+
+//============================================================
+// REQUIRED FIELD GLOW
+//============================================================
+function refreshGlow(){
+  const loc = $('f-location');
+  if (loc) loc.classList.toggle('needs-input', !loc.value);
+  document.querySelectorAll('[data-worker-field="worker"]').forEach(s => {
+    s.classList.toggle('needs-input', !s.value || s.value === '__add_worker__');
+  });
+  document.querySelectorAll('[data-worker-field="start"], [data-worker-field="end"]').forEach(s => {
+    s.classList.toggle('needs-input', !s.value);
+  });
+}
+
+//============================================================
+// LOCK & SAVE ALL
+//============================================================
+$('btn-lock-all').addEventListener('click', () => {
+  const date = $('global-date').value || todayStamp();
+  const todays = state.entries.filter(e => e.date === date && !e.locked);
+  if (todays.length === 0) {
+    alert('Nothing to lock — no entries for ' + date + ' yet.');
     return;
   }
+  if (!confirm(`Lock & save all ${todays.length} entr${todays.length === 1 ? 'y' : 'ies'} for ${date}?\n\nThis will download a CSV and clear the forms for the next day.`)) return;
 
-  const items = {};
-  document.querySelectorAll('#e-items input[data-item]').forEach(inp => {
-    const n = parseInt(inp.value, 10);
-    if (!isNaN(n) && n > 0) items[inp.dataset.item] = n;
+  // Trigger CSV download FIRST so user has the file
+  downloadDayCSV(date);
+
+  // Lock
+  todays.forEach(e => {
+    e.locked = true;
+    e.lockedAt = new Date().toISOString();
   });
-
-  const entry = {
-    id: Date.now() + '-' + Math.random().toString(36).slice(2,7),
-    date, cart, category: activeCategory, location, worker,
-    start, end, notes, items,
-    hours: hoursBetween(start, end),
-    locked: true,
-    createdAt: new Date().toISOString()
-  };
-  state.entries.push(entry);
   save();
-  toast('✓ Saved for ' + cart);
-  clearForm();
+
+  // Reset date confirmation so glow returns next day
+  localStorage.removeItem(DATE_CONFIRMED_KEY);
+  initGlobalDate();
+
+  // Re-render — current view will pull a fresh draft for the (possibly new) date
+  renderEntryView();
+  toast('🔒 Locked ' + todays.length + ' entries · CSV downloaded');
 });
 
-$('btn-clear').addEventListener('click', clearForm);
-
-function clearForm(){
-  $('e-location').value = ''; $('e-worker').value = '';
-  $('e-start').value = ''; $('e-end').value = ''; $('e-notes').value = '';
-  document.querySelectorAll('#e-items input[data-item]').forEach(i => i.value = '');
-  refreshRequiredGlow();
+//============================================================
+// CSV / JSON EXPORT
+//============================================================
+function entryRow(e){
+  const cat = e.category || '';
+  const items = HAS_INVENTORY(cat) ? PRICES[cat] : [];
+  const morningTotal = items.reduce((s, it) => s + (e.morning?.[it.name] || 0) * it.price, 0);
+  const leftoverTotal = items.reduce((s, it) => s + (e.evening?.[it.name] || 0) * it.price, 0);
+  const recon = morningTotal - num(e.cash) - num(e.debit) - leftoverTotal;
+  const workers = (e.workers || []).filter(w => w.worker).map(w => `${w.worker} (${w.start || '?'}–${w.end || '?'})`).join('; ');
+  return {
+    Date: e.date,
+    Category: cat,
+    Cart: e.cart,
+    Location: e.location,
+    Workers: workers,
+    'Worker count': (e.workers || []).filter(w => w.worker).length,
+    Cash: num(e.cash).toFixed(2),
+    Debit: num(e.debit).toFixed(2),
+    Tips: num(e.tips).toFixed(2),
+    'Tips per worker': (() => {
+      const n = (e.workers || []).filter(w => w.worker).length;
+      return n ? (num(e.tips) / n).toFixed(2) : '';
+    })(),
+    'Morning $ out': HAS_INVENTORY(cat) ? morningTotal.toFixed(2) : '',
+    'Leftover $':    HAS_INVENTORY(cat) ? leftoverTotal.toFixed(2) : '',
+    Reconciliation:  HAS_INVENTORY(cat) ? recon.toFixed(2) : '',
+    Locked: e.locked ? 'Y' : 'N',
+    Notes: e.notes || '',
+    // per-item morning + evening breakdowns
+    ...Object.fromEntries(items.map(it => [`AM ${it.name}`, e.morning?.[it.name] ?? ''])),
+    ...Object.fromEntries(items.map(it => [`PM ${it.name}`, e.evening?.[it.name] ?? ''])),
+  };
 }
 
-const REQUIRED_FIELDS = ['e-location','e-worker','e-start','e-end'];
-function refreshRequiredGlow(){
-  REQUIRED_FIELDS.forEach(id => {
-    const el = $(id);
-    if (!el) return;
-    const v = (el.value || '').trim();
-    const filled = v && v !== '__add__';
-    el.classList.toggle('needs-input', !filled);
-  });
+function csvCell(v){
+  v = String(v ?? '');
+  if (/[",\n]/.test(v)) return '"' + v.replace(/"/g,'""') + '"';
+  return v;
 }
-REQUIRED_FIELDS.forEach(id => {
-  const el = document.getElementById(id);
-  if (el) {
-    el.addEventListener('input', refreshRequiredGlow);
-    el.addEventListener('change', refreshRequiredGlow);
-  }
+function entriesToCSV(entries){
+  const rows = entries.map(entryRow);
+  const headers = [...new Set(rows.flatMap(r => Object.keys(r)))];
+  const lines = [headers.join(',')];
+  for (const r of rows) lines.push(headers.map(h => csvCell(r[h] ?? '')).join(','));
+  return lines.join('\n');
+}
+function downloadDayCSV(date){
+  const todays = state.entries.filter(e => e.date === date);
+  if (todays.length === 0) return;
+  const csv = entriesToCSV(todays);
+  download(`food-cart-${date}.csv`, csv, 'text/csv');
+}
+function download(name, content, mime){
+  const blob = new Blob([content], {type: mime});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+
+$('btn-export-csv').addEventListener('click', () => {
+  if (state.entries.length === 0) { alert('No entries to export'); return; }
+  const csv = entriesToCSV(state.entries.slice().sort((a,b) => a.date.localeCompare(b.date)));
+  download('food-cart-manager-' + todayStamp() + '.csv', csv, 'text/csv');
+});
+$('btn-export-json').addEventListener('click', () => {
+  download('food-cart-manager-backup-' + todayStamp() + '.json',
+    JSON.stringify(state, null, 2), 'application/json');
 });
 
-function hoursBetween(a,b){
-  if (!a || !b) return null;
-  const [ah,am] = a.split(':').map(Number);
-  const [bh,bm] = b.split(':').map(Number);
-  let mins = (bh*60+bm) - (ah*60+am);
-  if (mins < 0) mins += 24*60;
-  return Math.round((mins/60)*100)/100;
-}
-
+//============================================================
+// SAVED VIEW
+//============================================================
 function renderSaved(){
   const list = $('saved-list');
   const filter = $('filter-date').value;
   const entries = state.entries
     .filter(e => !filter || e.date === filter)
-    .sort((a,b) => (b.date+b.createdAt).localeCompare(a.date+a.createdAt));
+    .sort((a,b) => (b.date+'-'+b.createdAt).localeCompare(a.date+'-'+a.createdAt));
 
   if (entries.length === 0){
     list.innerHTML = '<div class="empty">No entries yet.</div>';
@@ -776,17 +1017,31 @@ function renderSaved(){
 
   list.innerHTML = entries.map(e => {
     const cat = CATEGORIES.find(c => c.key === e.category) || {emoji:'🚚'};
-    const itemRows = Object.entries(e.items||{}).map(([k,v]) =>
-      `<div class="item-row"><div class="item-name">${escapeHtml(k)}</div><div><b>${v}</b></div></div>`
-    ).join('') || '<div class="empty" style="padding:10px">No inventory recorded</div>';
-    const hrs = e.hours != null ? `${e.hours}h` : '—';
-    const time = (e.start && e.end) ? `${e.start}–${e.end}` : '';
+    const workers = (e.workers || []).filter(w => w.worker)
+      .map(w => `${escapeHtml(w.worker)} (${w.start || '?'}–${w.end || '?'})`).join(', ');
+    const items = HAS_INVENTORY(e.category) ? PRICES[e.category] : [];
+    const morningTotal = items.reduce((s, it) => s + (e.morning?.[it.name] || 0) * it.price, 0);
+    const leftoverTotal = items.reduce((s, it) => s + (e.evening?.[it.name] || 0) * it.price, 0);
+    const recon = morningTotal - num(e.cash) - num(e.debit) - leftoverTotal;
+
+    let inv = '';
+    if (HAS_INVENTORY(e.category)) {
+      inv = `
+        <div class="meta">🌅 Out: ${fmt(morningTotal)}  ·  🌆 Left: ${fmt(leftoverTotal)}  ·  💵 Cash ${fmt(e.cash)} + Debit ${fmt(e.debit)}</div>
+        <div class="meta" style="color:${Math.abs(recon)<0.005?'#1a7a36':'#b00020'}">
+          ${Math.abs(recon)<0.005 ? '✓ Balanced' : `⚠ Discrepancy ${fmt(recon)}`}
+        </div>`;
+    } else {
+      inv = `<div class="meta">💵 Cash ${fmt(e.cash)} + Debit ${fmt(e.debit)}</div>`;
+    }
+
     return `<div class="card">
-      <h3>${cat.emoji} ${escapeHtml(e.cart)} <span class="pill">LOCKED</span></h3>
-      <div class="meta">📅 ${escapeHtml(e.date)} · 📍 ${escapeHtml(e.location)} · 👤 ${escapeHtml(e.worker)}</div>
-      <div class="meta">⏱ ${time} (${hrs})</div>
-      ${itemRows}
-      ${e.notes ? `<div class="meta" style="margin-top:8px">📝 ${escapeHtml(e.notes)}</div>`:''}
+      <h3>${cat.emoji} ${escapeHtml(e.cart)} ${e.locked ? '<span class="pill">LOCKED</span>' : '<span class="pill" style="background:#ff9500">DRAFT</span>'}</h3>
+      <div class="meta">📅 ${escapeHtml(e.date)} · 📍 ${escapeHtml(e.location || '—')}</div>
+      <div class="meta">👤 ${workers || '—'}</div>
+      ${inv}
+      <div class="meta">💰 Tips ${fmt(e.tips)}</div>
+      ${e.notes ? `<div class="meta" style="margin-top:6px">📝 ${escapeHtml(e.notes)}</div>`:''}
       <div style="display:flex;gap:8px;margin-top:10px">
         <button class="btn small danger" onclick="deleteEntry('${e.id}')">Delete</button>
       </div>
@@ -807,40 +1062,14 @@ function deleteEntry(id){
   toast('Deleted');
 }
 
-$('btn-export-csv').addEventListener('click', () => {
-  const allItems = [...new Set(state.entries.flatMap(e => Object.keys(e.items||{})))];
-  const headers = ['Date','Category','Cart','Location','Worker','Start','End','Hours','Notes', ...allItems];
-  const rows = [headers];
-  for (const e of state.entries.slice().sort((a,b)=>a.date.localeCompare(b.date))){
-    const row = [e.date, e.category||'', e.cart, e.location, e.worker, e.start||'', e.end||'', e.hours??'', e.notes||''];
-    for (const it of allItems) row.push(e.items?.[it] ?? '');
-    rows.push(row);
-  }
-  const csv = rows.map(r => r.map(csvCell).join(',')).join('\n');
-  download('food-cart-manager-' + todayStamp() + '.csv', csv, 'text/csv');
-});
-$('btn-export-json').addEventListener('click', () => {
-  download('food-cart-manager-backup-' + todayStamp() + '.json',
-    JSON.stringify(state, null, 2), 'application/json');
-});
-function csvCell(v){
-  v = String(v ?? '');
-  if (/[",\n]/.test(v)) return '"' + v.replace(/"/g,'""') + '"';
-  return v;
-}
-function download(name, content, mime){
-  const blob = new Blob([content], {type: mime});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = name; a.click();
-  setTimeout(()=>URL.revokeObjectURL(url), 1000);
-}
-
+//============================================================
+// SETTINGS
+//============================================================
 function renderSettings(){
   renderList('list-workers', 'workers');
   renderList('list-locations', 'locations');
-  renderList('list-items', 'items');
   renderCartNameEditor();
+  renderPricesDisplay();
 }
 function renderList(elId, key){
   const el = $(elId);
@@ -872,6 +1101,17 @@ function renderCartNameEditor(){
         <input type="text" id="new-cart-${c.key}" placeholder="Add cart to ${c.label}">
         <button class="btn small" onclick="addCart('${c.key}')">＋</button>
       </div></div>`;
+  }).join('');
+}
+function renderPricesDisplay(){
+  const wrap = $('prices-display');
+  wrap.innerHTML = Object.entries(PRICES).map(([cat, items]) => {
+    const c = CATEGORIES.find(x => x.key === cat);
+    const rows = items.map(it =>
+      `<div class="settings-row"><div class="name">${escapeHtml(it.name)}</div><b>$${it.price.toFixed(2)}</b></div>`
+    ).join('');
+    return `<div style="margin-top:8px"><b>${c.emoji} ${c.label}</b>
+      <div class="settings-list" style="margin-top:6px">${rows}</div></div>`;
   }).join('');
 }
 function renameCart(key, i, val){
@@ -922,7 +1162,6 @@ $('btn-wipe').addEventListener('click', () => {
   showView('entry');
   toast('All data erased');
 });
-
 $('restore-file').addEventListener('change', (ev) => {
   const f = ev.target.files[0];
   if (!f) return;
@@ -946,7 +1185,9 @@ $('restore-file').addEventListener('change', (ev) => {
   r.readAsText(f);
 });
 
-// === CUSTOM CALENDAR DATE PICKER ===
+//============================================================
+// CALENDAR DATE PICKER
+//============================================================
 const DATE_KEY = 'fcm_globalDate';
 const DATE_CONFIRMED_KEY = 'fcm_dateConfirmedOn';
 const MONTH_NAMES = ['January','February','March','April','May','June',
@@ -963,30 +1204,22 @@ function initGlobalDate(){
   $('global-date').value = dpSelected;
   updateDateDisplay(dpSelected, needsConfirm);
 }
-
 function updateDateDisplay(dateStr, glow){
   const btn = $('date-display');
-  if (!dateStr) {
-    btn.textContent = 'Tap to set date';
-  } else {
+  if (!dateStr) { btn.textContent = 'Tap to set date'; }
+  else {
     const [y, m, d] = dateStr.split('-').map(Number);
     btn.textContent = MONTH_NAMES[m - 1] + ' ' + d + ', ' + y;
   }
   btn.classList.toggle('date-master-glow', !!glow);
 }
-
 function openDatePicker(){
   const base = dpSelected ? new Date(dpSelected + 'T12:00:00') : new Date();
-  dpYear = base.getFullYear();
-  dpMonth = base.getMonth();
+  dpYear = base.getFullYear(); dpMonth = base.getMonth();
   renderCalendarGrid();
   $('dp-overlay').style.display = 'flex';
 }
-
-function closeDatePicker(){
-  $('dp-overlay').style.display = 'none';
-}
-
+function closeDatePicker(){ $('dp-overlay').style.display = 'none'; }
 function renderCalendarGrid(){
   $('dp-month-label').textContent = MONTH_NAMES[dpMonth] + ' ' + dpYear;
   const grid = $('dp-grid');
@@ -995,15 +1228,12 @@ function renderCalendarGrid(){
   const firstWeekday = new Date(dpYear, dpMonth, 1).getDay();
   const daysInMonth = new Date(dpYear, dpMonth + 1, 0).getDate();
   const daysInPrev = new Date(dpYear, dpMonth, 0).getDate();
-
-  // trailing days from previous month (greyed out, not tappable)
   for (let i = firstWeekday - 1; i >= 0; i--) {
     const cell = document.createElement('div');
     cell.className = 'dp-day other-month';
     cell.textContent = daysInPrev - i;
     grid.appendChild(cell);
   }
-  // days of this month
   for (let d = 1; d <= daysInMonth; d++) {
     const ds = dpYear + '-' + String(dpMonth + 1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
     const cell = document.createElement('div');
@@ -1014,7 +1244,6 @@ function renderCalendarGrid(){
     cell.onclick = () => { dpSelected = ds; renderCalendarGrid(); };
     grid.appendChild(cell);
   }
-  // leading days of next month (greyed out)
   const totalCells = Math.ceil((firstWeekday + daysInMonth) / 7) * 7;
   for (let d = 1; d <= totalCells - firstWeekday - daysInMonth; d++) {
     const cell = document.createElement('div');
@@ -1023,7 +1252,6 @@ function renderCalendarGrid(){
     grid.appendChild(cell);
   }
 }
-
 $('date-display').addEventListener('click', openDatePicker);
 $('dp-prev').addEventListener('click', () => {
   if (--dpMonth < 0) { dpMonth = 11; dpYear--; }
@@ -1041,16 +1269,16 @@ $('dp-confirm').addEventListener('click', () => {
   localStorage.setItem(DATE_CONFIRMED_KEY, todayStamp());
   updateDateDisplay(dpSelected, false);
   closeDatePicker();
+  renderEntryView();  // refresh form to load draft for this date
 });
-// tap outside the sheet to dismiss
 $('dp-overlay').addEventListener('click', e => {
   if (e.target === $('dp-overlay')) closeDatePicker();
 });
 $('dp-sheet').addEventListener('click', e => e.stopPropagation());
 
-// 💾 quick export — jumps to Saved view so user can hit CSV/JSON
-$('icon-export').addEventListener('click', () => showView(activeView === 'saved' ? 'entry' : 'saved'));
-
+//============================================================
+// INIT
+//============================================================
 initGlobalDate();
 renderPrimaryTabs();
 renderSubTabs();
