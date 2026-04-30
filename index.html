@@ -570,7 +570,7 @@
   </div>
 
   <!-- PAYROLL VIEW -->
-  <div id="view-payroll" style="display:none">
+  <div id="view-payroll" style="display:none;border:3px solid #34c759;border-radius:16px;padding:14px;background:#f0fdf4;margin-bottom:12px">
     <h2 style="margin:8px 0 12px">💰 Payroll</h2>
     <div id="payroll-owed-banner" class="payroll-owed-banner" style="display:none">
       <span class="payroll-owed-label">Total Hours Owed</span>
@@ -855,6 +855,7 @@ function renderPrimaryTabs(){
   // Payroll tab
   const pbtn = document.createElement('button');
   pbtn.className = 'primary-tab' + (activeView === 'payroll' ? ' active' : '');
+  pbtn.id = 'tab-payroll';
   pbtn.innerHTML = `<span class="emoji">💰</span>Payroll`;
   pbtn.onclick = () => {
     showView('payroll');
@@ -1347,10 +1348,15 @@ function renderPayroll(){
     let aHtml = '';
     for (const [worker, shifts] of Object.entries(paidByWorker)) {
       const paidTotal = shifts.reduce((s, sh) => s + (sh.hours || 0), 0);
+      const workerWage = (state.wages && state.wages[worker]) || 0;
+      const paidDollars = workerWage > 0 ? workerWage * paidTotal : 0;
+      const paidSummary = paidDollars > 0
+        ? `${fmtHours(paidTotal)} · ${fmt(paidDollars)} paid`
+        : `${fmtHours(paidTotal)} paid`;
       aHtml += `<details class="payroll-archive-worker">
         <summary>
           <span class="payroll-archive-name">👤 ${escapeHtml(worker)}</span>
-          <span class="payroll-archive-total">${fmtHours(paidTotal)} paid</span>
+          <span class="payroll-archive-total">${paidSummary}</span>
         </summary>`;
       const sorted = shifts.slice().sort((a, b) => (b.paidAt || '').localeCompare(a.paidAt || ''));
       for (const shift of sorted) {
@@ -1951,78 +1957,83 @@ const TOUR_STEPS = [
   {
     selector: '.header h1',
     title: '👋 Welcome to Food Cart Manager',
-    body: 'Quick 60-second tour so you know where everything lives. Tap <b>Next</b> to walk through each feature — it\'ll highlight them one by one. You can skip anytime.',
+    body: 'Quick tour so you know where everything lives. Tap <b>Next</b> to walk through each feature — it highlights them one by one. You can skip anytime.',
   },
   {
     selector: '.date-bar',
-    title: '🗓️ Set the day',
-    body: 'Tap the date to pick today (or any day). The bar glows red until you confirm — that way you never log entries against the wrong day by accident.',
+    title: '🗓️ Set the day first',
+    body: 'Tap the date to pick today (or any day). The bar glows <b style="color:#ff3b30">red</b> until you confirm — so you never log against the wrong day by accident.',
   },
   {
     selector: '#btn-lock-all',
-    title: '🔒 Lock & Save All + Wipe',
-    body: 'When the day is done, tap this. It locks every cart\'s entries for the day, saves them, and wipes the form clean for tomorrow.',
+    title: '🔒 Lock & Save All',
+    body: 'End of day — tap this. It locks every cart\'s entries, clears the forms, and resets for tomorrow. Data stays saved and searchable in <b>📋 Saved</b>.',
   },
   {
     selector: '.primary-tabs',
-    title: '🚚 Pick a category',
-    body: 'Six tabs across the top: five cart categories plus <b>💰 Payroll</b> for tracking employee hours and pay.',
+    title: '🚚 Six tabs across the top',
+    body: '<b>🍦 Novelty · 🌭 Hotdog · 🍟 Fry · 🍨 B&J · 🍦 Soft Serve</b> — each is a cart category with its own entry forms.<br><br><b>💰 Payroll</b> — track employee hours, wages, and who\'s been paid (more on that next).',
+  },
+  {
+    selector: '#tab-payroll',
+    title: '💰 Payroll tab',
+    body: 'Shows every worker\'s unpaid hours pulled straight from shift entries.<br><br>• <b>Hidden wage field</b> (👁 to reveal) — enter hourly rate, it calculates $ owed automatically<br>• <b>"Pay this day only"</b> — marks one shift as paid<br>• <b>"Pay all days and hours for this worker"</b> — pays everything at once<br>• Paid shifts archive at the bottom with total hours + dollars paid',
   },
   {
     selector: '.sub-tabs',
     title: '🎨 Pick the specific cart',
-    body: 'Color-coded tabs for each individual cart in the chosen category. Tap one to log that cart\'s shift. Each cart\'s data is kept separate.',
+    body: 'Color-coded tabs for each cart in the category. Tap one to log that cart\'s shift. Each cart\'s data is kept completely separate.',
   },
   {
     selector: '.cart-banner',
     title: '🏷️ Active cart',
-    body: 'This banner always shows which cart you\'re currently entering data for — so you don\'t accidentally type into the wrong cart.',
+    body: 'This banner always shows which cart you\'re entering data for — so you don\'t accidentally type into the wrong one.',
   },
   {
     selector: '#f-location',
     title: '📍 Location',
-    body: 'Where the cart was set up today. Pick from the list, or tap <b>＋ Add new…</b> to create a new location on the fly.',
+    body: 'Where the cart was set up today. Pick from the list (Zoo playground, Pond #1, etc.) or tap <b>＋ Add new…</b> to add on the fly.',
   },
   {
     selector: '#workers-list',
     title: '👷 Workers + hours',
-    body: 'Add each worker with start + end times (snaps to 5-minute intervals). Tips split evenly across named workers automatically.',
-    fallbackSelector: 'label[for], #entry-form-content',
+    body: 'Add each worker who worked the shift. Time dropdowns snap to <b>5-minute intervals</b> (9:00 AM, 9:05 AM…) — no minute-by-minute noise.<br><br>Tips entered below split evenly across all named workers automatically.',
+    fallbackSelector: '#entry-form-content',
   },
   {
     selector: '.section.morning',
-    title: '🌅 Morning inventory out',
-    body: 'Count what you load onto the cart in the morning. Each item × its price totals automatically into the <b>GRAND TOTAL OUT</b>.',
+    title: '🌅 Morning — inventory out',
+    body: 'Count what you load onto the cart at the start of the day. Each item × its price totals into the <b>GRAND TOTAL OUT</b>. Tap ⚙️ Settings to edit prices anytime.',
   },
   {
     selector: '[data-field="cash"]',
     title: '💵 Cash + Debit received',
-    body: 'Enter the totals at the end of the day. These are subtracted from morning inventory to figure out reconciliation.',
+    body: 'Enter end-of-day totals. These get subtracted from morning inventory to calculate the reconciliation.',
   },
   {
     selector: '.section.evening',
-    title: '🌆 Evening leftovers',
-    body: 'Recount what came back unsold. The system uses this + cash + debit to reconcile against morning totals automatically.',
+    title: '🌆 Evening — leftovers',
+    body: 'Recount what came back unsold. The app uses morning − cash − debit − leftover to reconcile automatically.',
   },
   {
     selector: '#recon-box',
-    title: '✅ Reconciliation',
-    body: '<b>Within $5</b> = giant green ✅ (balanced).<br><b>Over by more than $5</b> = yellow warning.<br><b>Under by more than $5</b> = red alert.',
+    title: '✅ Reconciliation result',
+    body: '<b style="color:#1a7a36">Within $5</b> = big green ✅ balanced.<br><b style="color:#7a5200">Over by more than $5</b> = yellow warning.<br><b style="color:#b00020">Under by more than $5</b> = red alert.',
   },
   {
     selector: '.tips-box',
     title: '💸 Tips',
-    body: 'Enter total tips. They auto-split evenly across the workers above. Tips don\'t affect reconciliation — they\'re just recorded for payout.',
+    body: 'Enter total tips here. They auto-split evenly across the workers listed above. Tips are recorded separately — they don\'t affect reconciliation.',
   },
   {
     selector: '#tour-help-btn',
-    title: '❓ This button is your friend',
-    body: 'Tap this floating <b>?</b> any time to replay this tour.',
+    title: '❓ Replay this tour anytime',
+    body: 'Tap this floating <b>?</b> button any time you want to see this tour again.',
   },
   {
     selector: '.header .icons',
-    title: '💾 📋 ⚙️ One last thing — top icons',
-    body: '<b>💾 Export</b> — download all entries as CSV.<br><b>📋 Saved</b> — view and search past entries.<br><b>⚙️ Settings</b> — manage workers, locations, and cart names.<br><br>That\'s everything — you\'re ready to roll! Hit <b>Done</b> 🎉',
+    title: '💾 📋 ⚙️ Top-right icons',
+    body: '<b>💾</b> — download all entries as CSV<br><b>📋 Saved</b> — search and view every past entry<br><b>⚙️ Settings</b> — manage workers, locations, cart names, and <b>edit item prices</b><br><br>You\'re all set — hit <b>Done</b> 🎉',
   },
 ];
 
