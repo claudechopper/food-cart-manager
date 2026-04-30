@@ -517,7 +517,9 @@
   }
   .tour-help-btn:active { transform: scale(0.92); }
   .tt-dsa { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #6e6e73; margin-bottom: 10px; cursor: pointer; }
+  #sync-dot { font-size: 14px; line-height: 1; cursor: default; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -525,6 +527,7 @@
   <div class="header">
     <h1>🍦 Food Cart Manager</h1>
     <div class="icons">
+      <span id="sync-dot" title="Cloud sync status" style="display:none"></span>
       <button class="icon-btn" id="icon-export" title="Export">💾</button>
       <button class="icon-btn" id="icon-saved" title="Saved entries">📋</button>
       <button class="icon-btn" id="icon-settings" title="Settings">⚙️</button>
@@ -657,6 +660,18 @@
 <button class="tour-help-btn" id="tour-help-btn" title="Show feature tour">?</button>
 
 <script>
+// ─── Supabase Cloud Sync Config ────────────────────────────────
+// After creating your Supabase project, replace these two values:
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';      // e.g. https://xxxx.supabase.co
+const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY'; // Project Settings → API → anon public
+// ──────────────────────────────────────────────────────────────
+let supabase = null;
+try {
+  if (SUPABASE_URL !== 'YOUR_SUPABASE_URL' && window.supabase) {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+} catch(e) { console.warn('Supabase init failed:', e); }
+
 //============================================================
 // CONSTANTS
 //============================================================
@@ -735,7 +750,80 @@ function load(){
     return p;
   } catch(e){ return structuredClone(DEFAULTS); }
 }
-function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+function save(){
+  localStorage.setItem(KEY, JSON.stringify(state));
+  syncToCloud();
+}
+
+function setSyncStatus(s) {
+  const dot = document.getElementById('sync-dot');
+  if (!dot) return;
+  if (!supabase) { dot.style.display = 'none'; return; }
+  dot.style.display = '';
+  dot.textContent = s === 'ok' ? '🟢' : s === 'saving' ? '🟡' : '🔴';
+  dot.title = s === 'ok' ? 'Synced to cloud' : s === 'saving' ? 'Saving to cloud…' : 'Sync error — check connection';
+}
+
+function syncToCloud() {
+  if (!supabase) return;
+  setSyncStatus('saving');
+  supabase.from('app_state')
+    .upsert({ id: 'main', state: state, updated_at: new Date().toISOString() })
+    .then(({ error }) => setSyncStatus(error ? 'error' : 'ok'));
+}
+
+function normalizeState(p) {
+  for (const k of Object.keys(DEFAULTS)) if (!(k in p)) p[k] = structuredClone(DEFAULTS[k]);
+  for (const c of CATEGORIES) {
+    if (!Array.isArray(p.carts?.[c.key])) {
+      p.carts = p.carts || {};
+      p.carts[c.key] = structuredClone(DEFAULTS.carts[c.key]);
+    }
+  }
+  if (!Array.isArray(p.paidShifts)) p.paidShifts = [];
+  if (!p.wages || typeof p.wages !== 'object') p.wages = {};
+  if (!p.prices || typeof p.prices !== 'object') p.prices = structuredClone(DEFAULT_PRICES);
+  for (const cat of Object.keys(DEFAULT_PRICES)) {
+    if (!Array.isArray(p.prices[cat])) p.prices[cat] = structuredClone(DEFAULT_PRICES[cat]);
+  }
+}
+
+async function pullFromCloud() {
+  if (!supabase) return;
+  setSyncStatus('saving');
+  const { data, error } = await supabase.from('app_state').select('state').eq('id', 'main').single();
+  if (error || !data?.state || Object.keys(data.state).length === 0) {
+    // Remote is empty — push whatever we have locally
+    await supabase.from('app_state').upsert({ id: 'main', state: state, updated_at: new Date().toISOString() });
+    setSyncStatus('ok');
+    return;
+  }
+  normalizeState(data.state);
+  state = data.state;
+  localStorage.setItem(KEY, JSON.stringify(state));
+  showView(activeView);
+  setSyncStatus('ok');
+}
+
+function initRealtime() {
+  if (!supabase) return;
+  supabase.channel('app_state_sync')
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'app_state',
+      filter: 'id=eq.main'
+    }, payload => {
+      if (!payload.new?.state) return;
+      normalizeState(payload.new.state);
+      state = payload.new.state;
+      localStorage.setItem(KEY, JSON.stringify(state));
+      showView(activeView);
+      setSyncStatus('ok');
+      toast('↑ Synced from another device');
+    })
+    .subscribe();
+}
 
 let state = load();
 
@@ -2155,6 +2243,10 @@ $('tour-help-btn').addEventListener('click', startTour);
 if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   setTimeout(startTour, 600);
 }
+
+// Start cloud sync after everything is initialized
+pullFromCloud();
+initRealtime();
 </script>
 </body>
 </html>
