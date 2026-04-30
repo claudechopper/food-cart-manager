@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Food Cart Tracker</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f5f5f7;
+    color: #111;
+    min-height: 100vh;
+    font-size: 18px;
+    -webkit-font-smoothing: antialiased;
+    padding: 16px;
+    padding-bottom: 120px;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 {
+    font-size: 1.7rem;
+    margin: 0 0 4px 0;
+    text-align: center;
+  }
+  .sub { text-align: center; color: #666; font-size: 0.95rem; margin-bottom: 18px; }
+
+  .tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 18px;
+    background: #e5e5ea;
+    padding: 4px;
+    border-radius: 10px;
+  }
+  .tab {
+    flex: 1;
+    padding: 12px 8px;
+    text-align: center;
+    border-radius: 7px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    color: #333;
+    border: none;
+    background: transparent;
+  }
+  .tab.active { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  label {
+    display: block;
+    font-weight: 700;
+    margin: 16px 0 6px 0;
+    font-size: 1.05rem;
+  }
+  input[type="text"], input[type="number"], input[type="date"], input[type="time"], select, textarea {
+    width: 100%;
+    padding: 14px;
+    font-size: 1.1rem;
+    border: 2px solid #d1d1d6;
+    border-radius: 10px;
+    background: #fff;
+    color: #111;
+    font-family: inherit;
+    outline: none;
+  }
+  input:focus, select:focus, textarea:focus { border-color: #007aff; }
+  textarea { min-height: 70px; resize: vertical; }
+
+  .btn {
+    width: 100%;
+    padding: 16px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    margin-top: 12px;
+    background: #007aff;
+    color: #fff;
+  }
+  .btn:active { opacity: 0.7; }
+  .btn.secondary { background: #e5e5ea; color: #111; }
+  .btn.danger { background: #ff3b30; color: #fff; }
+  .btn.success { background: #34c759; color: #fff; }
+  .btn.small { padding: 10px 14px; font-size: 0.95rem; width: auto; margin-top: 0; }
+
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+    border: 1px solid #e5e5ea;
+  }
+  .card h3 { margin: 0 0 6px 0; font-size: 1.1rem; }
+  .card .meta { color: #666; font-size: 0.9rem; margin-bottom: 8px; }
+
+  .item-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .item-row:last-child { border-bottom: none; }
+  .item-name { flex: 1; font-weight: 600; }
+  .item-row input[type="number"] { width: 90px; padding: 10px; text-align: center; }
+
+  .settings-list {
+    background: #fff;
+    border-radius: 10px;
+    padding: 4px 0;
+    margin-bottom: 8px;
+  }
+  .settings-row {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid #f0f0f0;
+    gap: 8px;
+  }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-row .name { flex: 1; }
+  .settings-row .x {
+    color: #ff3b30;
+    background: none;
+    border: none;
+    font-size: 1.4rem;
+    cursor: pointer;
+    padding: 0 8px;
+  }
+
+  .add-new-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .add-new-row input { flex: 1; }
+  .add-new-row button { padding: 14px 18px; }
+
+  .export-row { display: flex; gap: 8px; margin-top: 10px; }
+  .export-row .btn { margin-top: 0; }
+
+  .empty { text-align: center; color: #888; padding: 30px 10px; }
+
+  details { background: #fff; border-radius: 10px; padding: 10px 14px; margin-bottom: 10px; border: 1px solid #e5e5ea; }
+  details[open] summary { margin-bottom: 8px; }
+  summary { font-weight: 700; cursor: pointer; padding: 4px 0; }
+
+  .pill {
+    display: inline-block;
+    background: #007aff;
+    color: #fff;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    margin-right: 6px;
+  }
+  .pill.locked { background: #34c759; }
+
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+  .filter-bar input { flex: 1; }
+
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #111;
+    color: #fff;
+    padding: 12px 22px;
+    border-radius: 999px;
+    font-weight: 600;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🍦 Food Cart Tracker</h1>
+  <div class="sub">Inventory · Hours · Locations</div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="entry">New Entry</button>
+    <button class="tab" data-tab="saved">Saved</button>
+    <button class="tab" data-tab="settings">Settings</button>
+  </div>
+
+  <!-- =============== NEW ENTRY =============== -->
+  <div class="panel active" id="panel-entry">
+    <label>Date</label>
+    <input type="date" id="e-date">
+
+    <label>Cart / Truck</label>
+    <select id="e-cart"></select>
+
+    <label>Location</label>
+    <select id="e-location"></select>
+
+    <label>Worker</label>
+    <select id="e-worker"></select>
+
+    <div class="row">
+      <div>
+        <label>Start time</label>
+        <input type="time" id="e-start">
+      </div>
+      <div>
+        <label>End time</label>
+        <input type="time" id="e-end">
+      </div>
+    </div>
+
+    <label>Inventory sent out</label>
+    <div class="card" id="e-items"></div>
+
+    <label>Notes</label>
+    <textarea id="e-notes" placeholder="Anything worth noting..."></textarea>
+
+    <button class="btn success" id="btn-save">🔒 Lock & Save Entry</button>
+    <button class="btn secondary" id="btn-clear">Clear form</button>
+  </div>
+
+  <!-- =============== SAVED =============== -->
+  <div class="panel" id="panel-saved">
+    <div class="filter-bar">
+      <input type="date" id="filter-date" title="Filter by date">
+      <button class="btn secondary small" id="btn-clear-filter">All</button>
+    </div>
+    <div class="export-row">
+      <button class="btn small secondary" id="btn-export-csv">⬇️ Export CSV</button>
+      <button class="btn small secondary" id="btn-export-json">⬇️ JSON Backup</button>
+    </div>
+    <div id="saved-list"></div>
+  </div>
+
+  <!-- =============== SETTINGS =============== -->
+  <div class="panel" id="panel-settings">
+    <details open>
+      <summary>👥 Workers</summary>
+      <div class="settings-list" id="list-workers"></div>
+      <div class="add-new-row">
+        <input type="text" id="new-worker" placeholder="Name (e.g. Sam)">
+        <button class="btn small" onclick="addItem('workers','new-worker')">＋ Add</button>
+      </div>
+    </details>
+
+    <details open>
+      <summary>📍 Locations</summary>
+      <div class="settings-list" id="list-locations"></div>
+      <div class="add-new-row">
+        <input type="text" id="new-location" placeholder="Location (e.g. Main Beach)">
+        <button class="btn small" onclick="addItem('locations','new-location')">＋ Add</button>
+      </div>
+    </details>
+
+    <details open>
+      <summary>🚚 Carts / Trucks</summary>
+      <div class="settings-list" id="list-carts"></div>
+      <div class="add-new-row">
+        <input type="text" id="new-cart" placeholder="Cart name (e.g. Novelty Cart 9)">
+        <button class="btn small" onclick="addItem('carts','new-cart')">＋ Add</button>
+      </div>
+    </details>
+
+    <details open>
+      <summary>🍔 Inventory Items</summary>
+      <div class="settings-list" id="list-items"></div>
+      <div class="add-new-row">
+        <input type="text" id="new-item" placeholder="Item (e.g. Hotdog buns)">
+        <button class="btn small" onclick="addItem('items','new-item')">＋ Add</button>
+      </div>
+    </details>
+
+    <details>
+      <summary>⚠️ Danger zone</summary>
+      <button class="btn danger" id="btn-wipe">Erase ALL data</button>
+      <label style="margin-top:18px">Restore from JSON backup</label>
+      <input type="file" id="restore-file" accept="application/json">
+    </details>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+//============================================================
+// STORAGE
+//============================================================
+const KEY = 'foodCartTracker_v1';
+
+const DEFAULTS = {
+  workers: [],
+  locations: [],
+  carts: [
+    'Novelty Cart 1','Novelty Cart 2','Novelty Cart 3','Novelty Cart 4',
+    'Novelty Cart 5','Novelty Cart 6','Novelty Cart 7','Novelty Cart 8',
+    'Hotdog Cart 1','Hotdog Cart 2','Hotdog Cart 3','Hotdog Cart 4',
+    'French Fry Truck',
+    'Ben & Jerry Truck',
+    'Soft Serve Truck'
+  ],
+  items: [
+    'Novelty ice cream (packaged)',
+    'Canned drinks',
+    'Bottled drinks',
+    'Hotdogs',
+    'Hotdog buns',
+    'French fry servings',
+    'Ben & Jerry pints',
+    'Soft serve cones',
+    'Soft serve cups',
+    'Napkins (packs)',
+    'Ice (bags)'
+  ],
+  entries: []
+};
+
+let state = load();
+
+function load(){
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return structuredClone(DEFAULTS);
+    const parsed = JSON.parse(raw);
+    // merge in defaults for any missing keys
+    for (const k of Object.keys(DEFAULTS)) if (!(k in parsed)) parsed[k] = structuredClone(DEFAULTS[k]);
+    return parsed;
+  } catch(e){ return structuredClone(DEFAULTS); }
+}
+function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+
+//============================================================
+// UI HELPERS
+//============================================================
+function $(id){ return document.getElementById(id); }
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._h);
+  toast._h = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+// tab switching
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    $('panel-'+btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'saved') renderSaved();
+    if (btn.dataset.tab === 'settings') renderSettings();
+    if (btn.dataset.tab === 'entry') renderEntryForm();
+  });
+});
+
+//============================================================
+// ENTRY FORM
+//============================================================
+function renderEntryForm(){
+  const today = new Date().toISOString().slice(0,10);
+  if (!$('e-date').value) $('e-date').value = today;
+
+  fillSelect('e-cart', state.carts, '— Select cart —');
+  fillSelect('e-location', state.locations, '— Select location —');
+  fillSelect('e-worker', state.workers, '— Select worker —');
+
+  // items
+  const wrap = $('e-items');
+  wrap.innerHTML = '';
+  if (state.items.length === 0){
+    wrap.innerHTML = '<div class="empty">No items yet. Add some in Settings.</div>';
+    return;
+  }
+  state.items.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.innerHTML = `<div class="item-name">${escapeHtml(item)}</div>
+      <input type="number" min="0" step="1" data-item="${escapeAttr(item)}" placeholder="0">`;
+    wrap.appendChild(row);
+  });
+}
+
+function fillSelect(id, list, placeholder){
+  const sel = $(id);
+  const prev = sel.value;
+  sel.innerHTML = '';
+  const opt0 = document.createElement('option');
+  opt0.value = ''; opt0.textContent = placeholder;
+  sel.appendChild(opt0);
+  list.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v;
+    sel.appendChild(o);
+  });
+  // "add new" sentinel
+  const addOpt = document.createElement('option');
+  addOpt.value = '__add__';
+  addOpt.textContent = '＋ Add new…';
+  sel.appendChild(addOpt);
+  if (list.includes(prev)) sel.value = prev;
+
+  sel.onchange = () => {
+    if (sel.value === '__add__'){
+      const kind = id === 'e-cart' ? 'carts' : id === 'e-location' ? 'locations' : 'workers';
+      const label = kind === 'carts' ? 'cart/truck' : kind === 'locations' ? 'location' : 'worker';
+      const v = prompt(`Add new ${label}:`);
+      if (v && v.trim()){
+        state[kind].push(v.trim());
+        save();
+        fillSelect(id, state[kind], placeholder);
+        sel.value = v.trim();
+      } else {
+        sel.value = '';
+      }
+    }
+  };
+}
+
+$('btn-save').addEventListener('click', () => {
+  const date = $('e-date').value;
+  const cart = $('e-cart').value;
+  const location = $('e-location').value;
+  const worker = $('e-worker').value;
+  const start = $('e-start').value;
+  const end = $('e-end').value;
+  const notes = $('e-notes').value.trim();
+
+  if (!date || !cart || !location || !worker){
+    alert('Please fill date, cart, location, and worker.');
+    return;
+  }
+
+  const items = {};
+  document.querySelectorAll('#e-items input[data-item]').forEach(inp => {
+    const n = parseInt(inp.value, 10);
+    if (!isNaN(n) && n > 0) items[inp.dataset.item] = n;
+  });
+
+  const entry = {
+    id: Date.now() + '-' + Math.random().toString(36).slice(2,7),
+    date, cart, location, worker, start, end, notes, items,
+    hours: hoursBetween(start, end),
+    locked: true,
+    createdAt: new Date().toISOString()
+  };
+  state.entries.push(entry);
+  save();
+  toast('✓ Entry locked & saved');
+  clearForm();
+});
+
+$('btn-clear').addEventListener('click', clearForm);
+
+function clearForm(){
+  $('e-cart').value = ''; $('e-location').value = ''; $('e-worker').value = '';
+  $('e-start').value = ''; $('e-end').value = ''; $('e-notes').value = '';
+  document.querySelectorAll('#e-items input[data-item]').forEach(i => i.value = '');
+}
+
+function hoursBetween(a,b){
+  if (!a || !b) return null;
+  const [ah,am] = a.split(':').map(Number);
+  const [bh,bm] = b.split(':').map(Number);
+  let mins = (bh*60+bm) - (ah*60+am);
+  if (mins < 0) mins += 24*60;
+  return Math.round((mins/60)*100)/100;
+}
+
+//============================================================
+// SAVED
+//============================================================
+function renderSaved(){
+  const list = $('saved-list');
+  const filter = $('filter-date').value;
+  const entries = state.entries
+    .filter(e => !filter || e.date === filter)
+    .sort((a,b) => (b.date+b.createdAt).localeCompare(a.date+a.createdAt));
+
+  if (entries.length === 0){
+    list.innerHTML = '<div class="empty">No entries yet.</div>';
+    return;
+  }
+
+  list.innerHTML = entries.map(e => {
+    const itemRows = Object.entries(e.items||{}).map(([k,v]) =>
+      `<div class="item-row"><div class="item-name">${escapeHtml(k)}</div><div><b>${v}</b></div></div>`
+    ).join('') || '<div class="empty" style="padding:10px">No inventory recorded</div>';
+
+    const hrs = e.hours != null ? `${e.hours}h` : '—';
+    const time = (e.start && e.end) ? `${e.start}–${e.end}` : '';
+
+    return `<div class="card">
+      <h3>${escapeHtml(e.cart)} <span class="pill locked">LOCKED</span></h3>
+      <div class="meta">📅 ${escapeHtml(e.date)} · 📍 ${escapeHtml(e.location)} · 👤 ${escapeHtml(e.worker)}</div>
+      <div class="meta">⏱ ${time} (${hrs})</div>
+      ${itemRows}
+      ${e.notes ? `<div class="meta" style="margin-top:8px">📝 ${escapeHtml(e.notes)}</div>`:''}
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn small danger" onclick="deleteEntry('${e.id}')">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+$('filter-date').addEventListener('change', renderSaved);
+$('btn-clear-filter').addEventListener('click', () => { $('filter-date').value=''; renderSaved(); });
+
+function deleteEntry(id){
+  if (!confirm('Delete this entry?')) return;
+  state.entries = state.entries.filter(e => e.id !== id);
+  save();
+  renderSaved();
+  toast('Deleted');
+}
+
+//============================================================
+// EXPORT
+//============================================================
+$('btn-export-csv').addEventListener('click', () => {
+  const allItems = [...new Set(state.entries.flatMap(e => Object.keys(e.items||{})))];
+  const headers = ['Date','Cart','Location','Worker','Start','End','Hours','Notes', ...allItems];
+  const rows = [headers];
+  for (const e of state.entries.slice().sort((a,b)=>a.date.localeCompare(b.date))){
+    const row = [e.date, e.cart, e.location, e.worker, e.start||'', e.end||'', e.hours??'', e.notes||''];
+    for (const it of allItems) row.push(e.items?.[it] ?? '');
+    rows.push(row);
+  }
+  const csv = rows.map(r => r.map(csvCell).join(',')).join('\n');
+  download('food-cart-tracker-' + todayStamp() + '.csv', csv, 'text/csv');
+});
+
+$('btn-export-json').addEventListener('click', () => {
+  download('food-cart-tracker-backup-' + todayStamp() + '.json',
+    JSON.stringify(state, null, 2), 'application/json');
+});
+
+function csvCell(v){
+  v = String(v ?? '');
+  if (/[",\n]/.test(v)) return '"' + v.replace(/"/g,'""') + '"';
+  return v;
+}
+function todayStamp(){ return new Date().toISOString().slice(0,10); }
+function download(name, content, mime){
+  const blob = new Blob([content], {type: mime});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+
+//============================================================
+// SETTINGS
+//============================================================
+function renderSettings(){
+  renderList('list-workers', 'workers');
+  renderList('list-locations', 'locations');
+  renderList('list-carts', 'carts');
+  renderList('list-items', 'items');
+}
+function renderList(elId, key){
+  const el = $(elId);
+  if (state[key].length === 0){
+    el.innerHTML = '<div class="empty" style="padding:14px">None yet</div>';
+    return;
+  }
+  el.innerHTML = state[key].map((v,i) =>
+    `<div class="settings-row">
+       <div class="name">${escapeHtml(v)}</div>
+       <button class="x" onclick="removeItem('${key}',${i})" title="Remove">✕</button>
+     </div>`
+  ).join('');
+}
+function addItem(key, inputId){
+  const inp = $(inputId);
+  const v = (inp.value||'').trim();
+  if (!v) return;
+  if (state[key].includes(v)){ alert('Already exists'); return; }
+  state[key].push(v);
+  save();
+  inp.value = '';
+  renderSettings();
+}
+function removeItem(key, i){
+  if (!confirm('Remove "'+state[key][i]+'"?')) return;
+  state[key].splice(i,1);
+  save();
+  renderSettings();
+}
+
+$('btn-wipe').addEventListener('click', () => {
+  if (!confirm('Erase ALL data including entries, workers, carts? This cannot be undone.')) return;
+  if (!confirm('Really? Last chance.')) return;
+  localStorage.removeItem(KEY);
+  state = structuredClone(DEFAULTS);
+  save();
+  renderEntryForm(); renderSaved(); renderSettings();
+  toast('All data erased');
+});
+
+$('restore-file').addEventListener('change', (ev) => {
+  const f = ev.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const data = JSON.parse(r.result);
+      if (!data || typeof data !== 'object') throw new Error('bad file');
+      if (!confirm('Replace ALL current data with this backup?')) return;
+      state = data;
+      // ensure defaults present
+      for (const k of Object.keys(DEFAULTS)) if (!(k in state)) state[k] = structuredClone(DEFAULTS[k]);
+      save();
+      renderEntryForm(); renderSaved(); renderSettings();
+      toast('Restored from backup');
+    } catch(e){ alert('Could not read backup: '+e.message); }
+  };
+  r.readAsText(f);
+});
+
+//============================================================
+// UTIL
+//============================================================
+function escapeHtml(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return escapeHtml(s); }
+
+// initial render
+renderEntryForm();
+</script>
+</body>
+</html>
