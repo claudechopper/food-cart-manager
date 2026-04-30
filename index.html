@@ -546,6 +546,23 @@
   .tour-help-btn:active { transform: scale(0.92); }
   .tt-dsa { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #6e6e73; margin-bottom: 10px; cursor: pointer; }
   #sync-dot { font-size: 14px; line-height: 1; cursor: default; }
+  .add-optional-btn {
+    width: 100%;
+    padding: 10px 14px;
+    background: #1a1a2a;
+    border: 1px dashed #3a3a50;
+    border-radius: 10px;
+    color: #555;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: left;
+    margin: 2px 0;
+  }
+  .reload-section { border-left: 3px solid #ff9500; padding-left: 10px; margin: 4px 0; }
+  .reload-header { color: #ff9500; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .meals-section { border-left: 3px solid #f59e0b; padding-left: 10px; margin: 4px 0; }
+  .meals-header { color: #f59e0b; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .dispatched-total { background: #0e1a0e; border-color: #22c55e; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -1140,14 +1157,70 @@ function renderFormHTML(e){
       </div>
     `).join('');
 
+    // ── Reload row builders ──────────────────────────────────
+    function reloadRowsHTML(field) {
+      return items.map(it => `
+        <div class="item-line">
+          <div class="name">${escapeHtml(it.name)}<span class="price">$${it.price.toFixed(2)} each</span></div>
+          <input type="number" inputmode="numeric" min="0" step="1"
+            data-reload="${field}" data-item="${escapeHtml(it.name)}" data-price="${it.price}"
+            placeholder="0" value="${(e[field]?.[it.name]) ?? ''}">
+          <div class="total" data-reload-total="${field}-${escapeHtml(it.name)}">$0.00</div>
+        </div>`).join('');
+    }
+    function reloadSectionHTML(num, field, label) {
+      if ((num === 1 && !reload1Open) || (num === 2 && !reload2Open)) {
+        return `<button type="button" class="add-optional-btn" id="add-reload${num}-btn">
+          🔄 Add Reload #${num}</button>`;
+      }
+      return `<div class="section reload-section">
+        <h3 class="reload-header">🔄 ${label}</h3>
+        ${reloadRowsHTML(field)}
+        <div class="grand-total" style="border-color:#ff9500">
+          <span>Reload #${num} Total</span>
+          <span class="amount" id="reload${num}-grand">$0.00</span>
+        </div>
+      </div>`;
+    }
+    // ── Meals row builder ────────────────────────────────────
+    function mealsSectionHTML() {
+      if (!mealsOpen) {
+        return `<button type="button" class="add-optional-btn" id="add-meals-btn">
+          🍽️ Employee Meals</button>`;
+      }
+      const mealRows = items.map(it => `
+        <div class="item-line">
+          <div class="name">${escapeHtml(it.name)}<span class="price">$${it.price.toFixed(2)} each</span></div>
+          <input type="number" inputmode="numeric" min="0" step="1"
+            data-meals="${escapeHtml(it.name)}" data-price="${it.price}"
+            placeholder="0" value="${(e.meals?.[it.name]) ?? ''}">
+          <div class="total" data-meals-total="${escapeHtml(it.name)}">$0.00</div>
+        </div>`).join('');
+      return `<div class="section meals-section">
+        <h3 class="meals-header">🍽️ Employee Meals</h3>
+        ${mealRows}
+        <div class="grand-total" style="border-color:#f59e0b">
+          <span>Meals Total (deducted)</span>
+          <span class="amount" id="meals-grand">$0.00</span>
+        </div>
+      </div>`;
+    }
+
     html += `
       <div class="section morning">
-        <h3>🌅 Morning — Inventory Out</h3>
+        <h3>🌅 Morning Load</h3>
         ${morningRows}
         <div class="grand-total">
-          <span>GRAND TOTAL OUT</span>
+          <span>Morning Total</span>
           <span class="amount" id="morning-grand">$0.00</span>
         </div>
+      </div>
+      ${reloadSectionHTML(1, 'reload1', 'Reload #1')}
+      ${reloadSectionHTML(2, 'reload2', 'Reload #2')}
+      ${mealsSectionHTML()}
+      <div class="grand-total dispatched-total">
+        <span>⬆ Total Dispatched</span>
+        <span class="amount" id="dispatched-grand">$0.00</span>
       </div>
 
       <div class="section evening">
@@ -1297,6 +1370,39 @@ function attachFormHandlers(draft){
         const v = (f === 'cash' || f === 'debit' || f === 'tips') ? num(inp.value) : inp.value;
         updateDraft(e => e[f] = v);
       }
+      recalcAll();
+    });
+  });
+
+  // Reload / Meals expand buttons
+  const r1Btn = $('add-reload1-btn');
+  if (r1Btn) r1Btn.addEventListener('click', () => { reload1Open = true; renderEntryView(); });
+  const r2Btn = $('add-reload2-btn');
+  if (r2Btn) r2Btn.addEventListener('click', () => { reload2Open = true; renderEntryView(); });
+  const mBtn = $('add-meals-btn');
+  if (mBtn) mBtn.addEventListener('click', () => { mealsOpen = true; renderEntryView(); });
+
+  // Reload inputs
+  document.querySelectorAll('[data-reload]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const field = inp.dataset.reload; // 'reload1' or 'reload2'
+      const item  = inp.dataset.item;
+      updateDraft(e => {
+        if (!e[field]) e[field] = {};
+        e[field][item] = num(inp.value);
+      });
+      recalcAll();
+    });
+  });
+
+  // Meals inputs
+  document.querySelectorAll('[data-meals]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const item = inp.dataset.meals;
+      updateDraft(e => {
+        if (!e.meals) e.meals = {};
+        e.meals[item] = num(inp.value);
+      });
       recalcAll();
     });
   });
