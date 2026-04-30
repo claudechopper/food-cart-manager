@@ -776,6 +776,7 @@ function load(){
     for (const cat of Object.keys(DEFAULT_PRICES)) {
       if (!Array.isArray(p.prices[cat])) p.prices[cat] = structuredClone(DEFAULT_PRICES[cat]);
     }
+    for (const e of (p.entries || [])) normalizeEntry(e);
     return p;
   } catch(e){ return structuredClone(DEFAULTS); }
 }
@@ -824,6 +825,31 @@ function normalizeState(p) {
   }
 }
 
+function normalizeEntry(e) {
+  // Ensure base inventory fields exist for inventory-bearing categories
+  if (HAS_INVENTORY(e.category)) {
+    if (!e.morning || typeof e.morning !== 'object') e.morning = {};
+    if (!e.evening || typeof e.evening !== 'object') e.evening = {};
+    if (!e.reload1 || typeof e.reload1 !== 'object') e.reload1 = {};
+    if (!e.reload2 || typeof e.reload2 !== 'object') e.reload2 = {};
+    if (!e.meals  || typeof e.meals  !== 'object') e.meals  = {};
+  }
+  // Ensure combo fields exist for combo entries
+  if (e.category === 'combo') {
+    if (!e.morningA  || typeof e.morningA  !== 'object') e.morningA  = {};
+    if (!e.eveningA  || typeof e.eveningA  !== 'object') e.eveningA  = {};
+    if (!e.reload1A  || typeof e.reload1A  !== 'object') e.reload1A  = {};
+    if (!e.reload2A  || typeof e.reload2A  !== 'object') e.reload2A  = {};
+    if (!e.mealsA    || typeof e.mealsA    !== 'object') e.mealsA    = {};
+    if (!e.morningB  || typeof e.morningB  !== 'object') e.morningB  = {};
+    if (!e.eveningB  || typeof e.eveningB  !== 'object') e.eveningB  = {};
+    if (!e.reload1B  || typeof e.reload1B  !== 'object') e.reload1B  = {};
+    if (!e.reload2B  || typeof e.reload2B  !== 'object') e.reload2B  = {};
+    if (!e.mealsB    || typeof e.mealsB    !== 'object') e.mealsB    = {};
+  }
+  if (!Array.isArray(e.workers)) e.workers = [{ worker: '', start: '', end: '' }];
+}
+
 async function pullFromCloud() {
   if (!CLOUD_ENABLED) return;
   setSyncStatus('saving');
@@ -843,6 +869,7 @@ async function pullFromCloud() {
     lastSyncedAt = remoteAt;
     normalizeState(rows[0].state);
     state = rows[0].state;
+    for (const e of (state.entries || [])) normalizeEntry(e);
     localStorage.setItem(KEY, JSON.stringify(state));
     showView(activeView);
     initialPullDone = true;
@@ -1022,13 +1049,17 @@ function getOrCreateDraft(){
       workers: [{ worker: '', start: '', end: '' }],
       morning: {},
       evening: {},
+      reload1: {}, reload2: {}, meals: {},
       cash: 0, debit: 0, tips: 0,
       notes: '',
       locked: false,
       createdAt: new Date().toISOString()
     };
+    normalizeEntry(e);
     state.entries.push(e);
     save();
+  } else {
+    normalizeEntry(e); // ensure old entries get new fields
   }
   return e;
 }
