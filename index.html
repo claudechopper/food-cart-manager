@@ -699,6 +699,10 @@ const CLOUD_HEADERS = {
 };
 let lastSyncedAt = null;
 let initialPullDone = false; // Block pushes until we've pulled once
+// ── Reload / Meals expand state (reset on cart navigation) ──
+let reload1Open = false;
+let reload2Open = false;
+let mealsOpen   = false;
 // ──────────────────────────────────────────────────────────────
 
 //============================================================
@@ -995,6 +999,7 @@ function renderPrimaryTabs(){
     btn.onclick = () => {
       activeCategory = c.key;
       activeCartIdx = 0;
+      reload1Open = false; reload2Open = false; mealsOpen = false;
       showView('entry');
       renderPrimaryTabs();
       renderSubTabs();
@@ -1026,6 +1031,7 @@ function renderSubTabs(){
     btn.title = cart;
     btn.onclick = () => {
       activeCartIdx = i;
+      reload1Open = false; reload2Open = false; mealsOpen = false;
       renderSubTabs();
       renderEntryView();
     };
@@ -1075,6 +1081,16 @@ function updateDraft(updater){
 //============================================================
 function renderEntryView(){
   const cartName = activeCartName() || '(no cart)';
+  // Auto-expand reload/meals sections if they already have data
+  const _draft = state.entries.find(x =>
+    x.date === ($('global-date')?.value || todayStamp()) &&
+    x.cart === cartName && !x.locked
+  );
+  if (_draft) {
+    if (Object.values(_draft.reload1 || {}).some(v => v > 0)) reload1Open = true;
+    if (Object.values(_draft.reload2 || {}).some(v => v > 0)) reload2Open = true;
+    if (Object.values(_draft.meals   || {}).some(v => v > 0)) mealsOpen   = true;
+  }
   const color = colorFor(activeCategory, activeCartIdx);
   const banner = $('cart-banner');
   banner.style.setProperty('--banner-color', color);
