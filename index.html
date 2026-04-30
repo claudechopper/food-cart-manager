@@ -1859,11 +1859,14 @@ document.addEventListener('change', e => {
 $('btn-clear-filter').addEventListener('click', () => { $('filter-date').value=''; renderSaved(); });
 
 function deleteEntry(id){
-  if (!confirm('Delete this entry?')) return;
+  const entry = state.entries.find(e => e.id === id);
+  if (!entry) return;
+  const msg = `Delete this entry?\n\n${CATEGORIES.find(c=>c.key===entry.category)?.emoji||'🚚'} ${entry.cart}\n📅 ${entry.date}\n📍 ${entry.location||'—'}`;
+  if (!confirm(msg)) return;
   state.entries = state.entries.filter(e => e.id !== id);
   save();
   renderSaved();
-  toast('Deleted');
+  toast('✓ Deleted');
 }
 
 //============================================================
