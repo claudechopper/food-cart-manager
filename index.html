@@ -1123,7 +1123,18 @@ function deactivateComboMode(draft) {
 function getOrCreateDraft(){
   const date = $('global-date').value || todayStamp();
   const cart = activeCartName();
-  let e = state.entries.find(x => x.date === date && x.cart === cart && !x.locked);
+  // First check: is there an active combo entry that uses this cart as its B-side?
+  // If so, redirect to that combo entry (don't create a phantom standalone draft).
+  let e = state.entries.find(x =>
+    x.date === date &&
+    x.category === 'combo' &&
+    x.comboCartB === cart &&
+    x.comboCategoryB === activeCategory &&
+    !x.locked
+  );
+  if (e) return e;
+  // Otherwise normal lookup
+  e = state.entries.find(x => x.date === date && x.cart === cart && !x.locked);
   if (!e) {
     e = {
       id: Date.now() + '-' + Math.random().toString(36).slice(2,7),
@@ -1164,9 +1175,16 @@ function renderEntryView(){
     x.cart === cartName && !x.locked
   );
   if (_draft) {
-    if (Object.values(_draft.reload1 || {}).some(v => v > 0)) reload1Open = true;
-    if (Object.values(_draft.reload2 || {}).some(v => v > 0)) reload2Open = true;
-    if (Object.values(_draft.meals   || {}).some(v => v > 0)) mealsOpen   = true;
+    if (_draft.category === 'combo') {
+      const anyHas = (...fields) => fields.some(f => Object.values(_draft[f] || {}).some(v => v > 0));
+      if (anyHas('reload1A','reload1B')) reload1Open = true;
+      if (anyHas('reload2A','reload2B')) reload2Open = true;
+      if (anyHas('mealsA','mealsB'))     mealsOpen   = true;
+    } else {
+      if (Object.values(_draft.reload1 || {}).some(v => v > 0)) reload1Open = true;
+      if (Object.values(_draft.reload2 || {}).some(v => v > 0)) reload2Open = true;
+      if (Object.values(_draft.meals   || {}).some(v => v > 0)) mealsOpen   = true;
+    }
   }
   const color = colorFor(activeCategory, activeCartIdx);
   const banner = $('cart-banner');
@@ -2497,7 +2515,14 @@ $('btn-clear-filter').addEventListener('click', () => { $('filter-date').value='
 function deleteEntry(id){
   const entry = state.entries.find(e => e.id === id);
   if (!entry) return;
-  const msg = `Delete this entry?\n\n${CATEGORIES.find(c=>c.key===entry.category)?.emoji||'🚚'} ${entry.cart}\n📅 ${entry.date}\n📍 ${entry.location||'—'}`;
+  const isCombo = entry.category === 'combo';
+  const emoji = isCombo
+    ? '🔀'
+    : (CATEGORIES.find(c=>c.key===entry.category)?.emoji || '🚚');
+  const cartLabel = isCombo
+    ? `${entry.cart} + ${entry.comboCartB || ''}`
+    : entry.cart;
+  const msg = `Delete this entry?\n\n${emoji} ${cartLabel}\n📅 ${entry.date}\n📍 ${entry.location||'—'}`;
   if (!confirm(msg)) return;
   state.entries = state.entries.filter(e => e.id !== id);
   save();
@@ -2588,10 +2613,21 @@ function updatePrice(cat, idx, value){
   if (newPrice === oldPrice) return;
 
   // Count how many saved entries reference this item — to show the user the blast radius
-  const affected = state.entries.filter(e =>
-    e.category === cat &&
-    ((e.morning && e.morning[item.name]) || (e.evening && e.evening[item.name]))
-  ).length;
+  const affected = state.entries.filter(e => {
+    // Standalone inventory entry of this category
+    if (e.category === cat) {
+      const fields = ['morning','evening','reload1','reload2','meals'];
+      if (fields.some(f => e[f] && e[f][item.name])) return true;
+    }
+    // Combo entry: hotdog A-side if cat==='hotdog', or B-side if cat===comboCategoryB
+    if (e.category === 'combo') {
+      const aFields = ['morningA','eveningA','reload1A','reload2A','mealsA'];
+      const bFields = ['morningB','eveningB','reload1B','reload2B','mealsB'];
+      if (cat === 'hotdog' && aFields.some(f => e[f] && e[f][item.name])) return true;
+      if (cat === e.comboCategoryB && bFields.some(f => e[f] && e[f][item.name])) return true;
+    }
+    return false;
+  }).length;
 
   const msg =
     `Change "${item.name}" price from ${fmt(oldPrice)} to ${fmt(newPrice)}?\n\n` +
