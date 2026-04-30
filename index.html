@@ -1553,7 +1553,7 @@ function wirePayrollHandlers(allShifts){
     const eyeBtn = inp.nextElementSibling;
     eyeBtn.addEventListener('click', () => {
       if (inp.type === 'password') {
-        inp.type = 'number';
+        inp.type = 'text';
         inp.focus();
         inp.select();
       } else {
