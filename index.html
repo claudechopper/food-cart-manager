@@ -139,6 +139,64 @@
   }
   .needs-input:focus { animation: none; }
 
+  /* === GLOBAL DATE BAR === */
+  .date-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff;
+    border-radius: 14px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    border: 2px solid #d1d1d6;
+  }
+  .date-bar .date-label {
+    font-weight: 800;
+    font-size: 1rem;
+    white-space: nowrap;
+  }
+  .date-bar input[type="date"] {
+    flex: 1;
+    font-size: 1.15rem;
+    font-weight: 700;
+    padding: 12px;
+    border: 3px solid #d1d1d6;
+    border-radius: 10px;
+  }
+  /* Hard glow — really loud */
+  .date-master-glow {
+    border-color: #ff3b30 !important;
+    border-width: 4px !important;
+    background: #fff5f5 !important;
+    box-shadow:
+      0 0 0 6px rgba(255, 59, 48, 0.35),
+      0 0 22px rgba(255, 59, 48, 0.55);
+    animation: redPulseHard 1.1s ease-in-out infinite;
+  }
+  @keyframes redPulseHard {
+    0%, 100% {
+      box-shadow:
+        0 0 0 6px rgba(255, 59, 48, 0.35),
+        0 0 22px rgba(255, 59, 48, 0.55);
+    }
+    50% {
+      box-shadow:
+        0 0 0 12px rgba(255, 59, 48, 0.18),
+        0 0 36px rgba(255, 59, 48, 0.30);
+    }
+  }
+  .date-master-glow:focus { animation: none; }
+
+  /* Loud export buttons */
+  .btn.export {
+    background: #34c759;
+    color: #fff;
+    font-size: 1.05rem;
+    padding: 14px;
+    margin-top: 0;
+  }
+  .btn.export.json { background: #007aff; }
+
   .btn {
     width: 100%;
     padding: 16px;
@@ -222,9 +280,16 @@
   <div class="header">
     <h1>🍦 Food Cart Manager</h1>
     <div class="icons">
+      <button class="icon-btn" id="icon-export" title="Export CSV">💾</button>
       <button class="icon-btn" id="icon-saved" title="Saved entries">📋</button>
       <button class="icon-btn" id="icon-settings" title="Settings">⚙️</button>
     </div>
+  </div>
+
+  <!-- GLOBAL DATE — applies to every entry until changed -->
+  <div class="date-bar">
+    <span class="date-label">🗓️ Date:</span>
+    <input type="date" id="global-date">
   </div>
 
   <div class="primary-tabs" id="primary-tabs"></div>
@@ -233,9 +298,6 @@
   <!-- ENTRY VIEW -->
   <div id="view-entry">
     <div class="cart-banner" id="cart-banner"></div>
-
-    <label>Date</label>
-    <input type="date" id="e-date">
 
     <label>Location</label>
     <select id="e-location"></select>
@@ -272,8 +334,8 @@
       <button class="btn secondary small" id="btn-clear-filter">All</button>
     </div>
     <div class="export-row">
-      <button class="btn small secondary" id="btn-export-csv">⬇️ CSV</button>
-      <button class="btn small secondary" id="btn-export-json">⬇️ JSON</button>
+      <button class="btn export" id="btn-export-csv">⬇️ Export CSV</button>
+      <button class="btn export json" id="btn-export-json">⬇️ JSON Backup</button>
     </div>
     <div id="saved-list"></div>
   </div>
@@ -461,8 +523,6 @@ function renderEntryView(){
   banner.innerHTML = `<span>${cat.emoji} ${escapeHtml(cartName)}</span>
     <span class="small">Tap fields to log</span>`;
 
-  if (!$('e-date').value) $('e-date').value = todayStamp();
-
   fillSelect('e-location', state.locations, '— Select location —');
   fillSelect('e-worker', state.workers, '— Select worker —');
 
@@ -518,7 +578,7 @@ function fillSelect(id, list, placeholder){
 }
 
 $('btn-save').addEventListener('click', () => {
-  const date = $('e-date').value;
+  const date = $('global-date').value;
   const cart = activeCartName();
   const location = $('e-location').value;
   const worker = $('e-worker').value;
@@ -771,6 +831,34 @@ $('restore-file').addEventListener('change', (ev) => {
   r.readAsText(f);
 });
 
+// === GLOBAL DATE (applies to every entry) ===
+const DATE_KEY = 'fcm_globalDate';
+const DATE_CONFIRMED_KEY = 'fcm_dateConfirmedOn';
+
+function initGlobalDate(){
+  const today = todayStamp();
+  const lastDate = localStorage.getItem(DATE_KEY);
+  const lastConfirmed = localStorage.getItem(DATE_CONFIRMED_KEY);
+  const needsConfirm = lastConfirmed !== today;
+  const inp = $('global-date');
+  inp.value = needsConfirm ? today : (lastDate || today);
+  inp.classList.toggle('date-master-glow', needsConfirm);
+}
+$('global-date').addEventListener('change', () => {
+  localStorage.setItem(DATE_KEY, $('global-date').value);
+  localStorage.setItem(DATE_CONFIRMED_KEY, todayStamp());
+  $('global-date').classList.remove('date-master-glow');
+});
+$('global-date').addEventListener('focus', () => {
+  // Tapping it counts as engaging — drop the glow as soon as they interact
+  localStorage.setItem(DATE_CONFIRMED_KEY, todayStamp());
+  $('global-date').classList.remove('date-master-glow');
+});
+
+// 💾 quick export — jumps to Saved view so user can hit CSV/JSON
+$('icon-export').addEventListener('click', () => showView(activeView === 'saved' ? 'entry' : 'saved'));
+
+initGlobalDate();
 renderPrimaryTabs();
 renderSubTabs();
 renderEntryView();
