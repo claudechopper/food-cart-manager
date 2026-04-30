@@ -661,11 +661,12 @@
 <script>
 // ─── Supabase Cloud Sync Config ────────────────────────────────
 const SUPABASE_URL = 'https://rwusdbjxpwvktjfjereh.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_A8uMyoUtAY5RH7svfa-FMA_fSLyJA_b';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ3dXNkYmp4cHd2a3RqZmplcmVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1NjM5OTAsImV4cCI6MjA5MzEzOTk5MH0.OGa5SQlS5CsYXt27z5skp45Oee_yp4PR6vAjb1_tZsE';
 const CLOUD_ENABLED = true;
 const CLOUD_REST = `${SUPABASE_URL}/rest/v1/app_state`;
 const CLOUD_HEADERS = {
   'apikey': SUPABASE_KEY,
+  'Authorization': `Bearer ${SUPABASE_KEY}`,
   'Content-Type': 'application/json'
 };
 let lastSyncedAt = null;
