@@ -116,13 +116,14 @@
 
   /* LOCK ALL button */
   .lock-all-btn {
-    width: 100%; padding: 12px; font-size: 1rem; font-weight: 700;
+    flex: 0 0 auto; width: 94px; padding: 10px 8px;
+    font-size: 0.68rem; font-weight: 800; line-height: 1.35;
     border: none; border-radius: 12px; cursor: pointer;
-    background: #34c759; color: #fff; margin-bottom: 14px;
-    box-shadow: 0 2px 6px rgba(52, 199, 89, 0.25);
-    letter-spacing: 0.3px;
+    background: #34c759; color: #fff;
+    box-shadow: 0 2px 6px rgba(52, 199, 89, 0.35);
+    white-space: normal; text-align: center;
   }
-  .lock-all-btn:active { opacity: 0.85; }
+  .lock-all-btn:active { opacity: 0.85; transform: scale(0.97); }
 
   /* generic buttons */
   .btn {
@@ -197,7 +198,9 @@
     border: 3px solid;
   }
   .recon-box.match { background: #e8f8ec; border-color: #34c759; color: #1a7a36; }
-  .recon-box.diff  { background: #ffe8e6; border-color: #ff3b30; color: #b00020; }
+  .recon-box.match .recon-checkmark { display: block; font-size: 3.2rem; line-height: 1; margin-bottom: 4px; }
+  .recon-box.diff-over  { background: #fffbe6; border-color: #f5a623; color: #7a5200; }
+  .recon-box.diff-under { background: #ffe8e6; border-color: #ff3b30; color: #b00020; }
   .recon-box .formula {
     display: block; font-size: 0.85rem; font-weight: 500;
     margin-top: 6px; color: inherit; opacity: 0.8;
@@ -321,6 +324,62 @@
   .dp-day.dp-selected { background: #007aff; color: #fff; border-color: #007aff; font-weight: 800; }
   .dp-actions { display: flex; gap: 10px; padding: 0 4px; }
   .dp-actions .btn { margin-top: 0; }
+
+  /* ── GUIDED TOUR ─────────────────────────────────────────── */
+  .tour-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+    z-index: 9000; display: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tour-overlay.active { display: block; }
+  .tour-highlight {
+    position: relative !important; z-index: 9001 !important;
+    box-shadow: 0 0 0 4px #ffd60a, 0 0 0 9px rgba(255, 214, 10, 0.5),
+                0 0 30px rgba(255, 214, 10, 0.85) !important;
+    border-radius: 14px !important;
+    animation: tourPulse 1.4s ease-in-out infinite;
+    transition: box-shadow 0.2s;
+  }
+  @keyframes tourPulse {
+    0%,100% { box-shadow: 0 0 0 4px #ffd60a, 0 0 0 9px rgba(255,214,10,0.5), 0 0 30px rgba(255,214,10,0.85); }
+    50%     { box-shadow: 0 0 0 4px #ffd60a, 0 0 0 14px rgba(255,214,10,0.25), 0 0 50px rgba(255,214,10,0.5); }
+  }
+  .tour-tooltip {
+    position: fixed; left: 12px; right: 12px;
+    background: #fff; border-radius: 16px; padding: 18px 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    z-index: 9002; max-width: 520px; margin: 0 auto;
+    border: 3px solid #007aff;
+  }
+  .tour-tooltip.bottom { bottom: 20px; }
+  .tour-tooltip.top { top: 20px; }
+  .tour-tooltip .tt-step { font-size: 0.78rem; color: #6e6e73; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.5px; }
+  .tour-tooltip .tt-title { font-size: 1.15rem; font-weight: 800; margin: 0 0 6px 0; color: #111; }
+  .tour-tooltip .tt-body { font-size: 0.98rem; line-height: 1.4; color: #333; margin-bottom: 14px; }
+  .tour-tooltip .tt-actions { display: flex; gap: 8px; align-items: center; }
+  .tour-tooltip .tt-actions .tt-spacer { flex: 1; }
+  .tour-tooltip button {
+    border: none; border-radius: 10px; padding: 10px 16px;
+    font-size: 0.95rem; font-weight: 700; cursor: pointer;
+    font-family: inherit;
+  }
+  .tour-tooltip .tt-skip { background: transparent; color: #6e6e73; padding: 10px 8px; }
+  .tour-tooltip .tt-prev { background: #e5e5ea; color: #111; }
+  .tour-tooltip .tt-next { background: #007aff; color: #fff; }
+  .tour-tooltip .tt-done { background: #34c759; color: #fff; }
+  .tour-tooltip button:active { opacity: 0.75; }
+
+  .tour-help-btn {
+    position: fixed; right: 14px; bottom: 14px;
+    width: 54px; height: 54px; border-radius: 50%;
+    background: #007aff; color: #fff;
+    border: none; cursor: pointer; font-size: 1.7rem; font-weight: 800;
+    box-shadow: 0 4px 14px rgba(0,122,255,0.45);
+    z-index: 8000; font-family: inherit;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tour-help-btn:active { transform: scale(0.92); }
+  .tt-dsa { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #6e6e73; margin-bottom: 10px; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -340,10 +399,8 @@
     <span class="date-label">🗓️ Date:</span>
     <button type="button" id="date-display" class="date-display">Tap to set date</button>
     <input type="hidden" id="global-date">
+    <button class="lock-all-btn" id="btn-lock-all">🔒 Lock & Save All Entries + Wipe for Next Day</button>
   </div>
-
-  <!-- LOCK & SAVE ALL -->
-  <button class="lock-all-btn" id="btn-lock-all">🔒 LOCK & SAVE ALL ENTRIES</button>
 
   <!-- Custom calendar bottom sheet -->
   <div id="dp-overlay" class="dp-overlay" style="display:none">
@@ -430,6 +487,21 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- GUIDED TOUR -->
+<div class="tour-overlay" id="tour-overlay"></div>
+<div class="tour-tooltip bottom" id="tour-tooltip" style="display:none">
+  <div class="tt-step" id="tt-step">STEP 1 OF 12</div>
+  <h3 class="tt-title" id="tt-title">Welcome</h3>
+  <div class="tt-body" id="tt-body"></div>
+  <div class="tt-actions">
+    <button class="tt-skip" id="tt-skip">Skip tour</button>
+    <span class="tt-spacer"></span>
+    <button class="tt-prev" id="tt-prev">‹ Back</button>
+    <button class="tt-next" id="tt-next">Next ›</button>
+  </div>
+</div>
+<button class="tour-help-btn" id="tour-help-btn" title="Show feature tour">?</button>
+
 <script>
 //============================================================
 // CONSTANTS
@@ -444,7 +516,7 @@ const CATEGORIES = [
 
 const NOVELTY_COLORS = ['#ff3b30','#ff9500','#ffcc00','#34c759','#00c7be','#007aff','#af52de','#ff2d92'];
 const HOTDOG_COLORS  = ['#ff3b30','#ff9500','#34c759','#007aff'];
-const SOLO_COLOR = { fry: '#ffcc00', benjerry: '#af52de', softserve: '#00c7be' };
+const SOLO_COLOR = { fry: '#ffcc00', benjerry: '#007aff', softserve: '#00c7be' };
 
 function colorFor(catKey, idx){
   if (catKey === 'novelty')  return NOVELTY_COLORS[idx] || '#888';
@@ -690,7 +762,8 @@ function renderFormHTML(e){
           <span class="amount" id="leftover-grand">$0.00</span>
         </div>
         <div class="recon-box match" id="recon-box">
-          <span id="recon-status">✓ Balanced</span>
+          <span class="recon-checkmark" id="recon-checkmark">✅</span>
+          <span id="recon-status">Balanced</span>
           <span class="formula" id="recon-formula">Morning − Cash − Debit − Leftover = $0.00</span>
         </div>
       </div>
@@ -732,8 +805,8 @@ function renderWorkerRowHTML(w, i){
         ${opts}
         <option value="__add_worker__">＋ Add new…</option>
       </select>
-      <input type="time" data-worker-field="start" data-idx="${i}" value="${w.start || ''}" placeholder="Start">
-      <input type="time" data-worker-field="end" data-idx="${i}" value="${w.end || ''}" placeholder="End">
+      <input type="time" step="900" data-worker-field="start" data-idx="${i}" value="${w.start || ''}" placeholder="Start">
+      <input type="time" step="900" data-worker-field="end" data-idx="${i}" value="${w.end || ''}" placeholder="End">
       <button class="x" data-remove-worker="${i}" title="Remove">✕</button>
     </div>
   `;
@@ -853,10 +926,16 @@ function recalcAll(){
     const status = $('recon-status');
     const formula = $('recon-formula');
     if (box) {
-      const matched = Math.abs(diff) < 0.005;
+      const absDiff = Math.abs(diff);
+      const matched = absDiff <= 5.005;
+      const over = !matched && diff > 0;
+      const under = !matched && diff < 0;
       box.classList.toggle('match', matched);
-      box.classList.toggle('diff', !matched);
-      status.textContent = matched ? '✓ Balanced' : `⚠ Discrepancy: ${diff > 0 ? '+' : ''}${fmt(diff)}`;
+      box.classList.toggle('diff-over', over);
+      box.classList.toggle('diff-under', under);
+      const ck = $('recon-checkmark');
+      if (ck) ck.style.display = matched ? 'block' : 'none';
+      status.textContent = matched ? 'Balanced' : `⚠ Discrepancy: ${diff > 0 ? '+' : ''}${fmt(diff)}`;
       formula.textContent = `${fmt(morningTotal)} − ${fmt(cash)} − ${fmt(debit)} − ${fmt(leftoverTotal)} = ${fmt(diff)}`;
     }
   }
@@ -1028,8 +1107,8 @@ function renderSaved(){
     if (HAS_INVENTORY(e.category)) {
       inv = `
         <div class="meta">🌅 Out: ${fmt(morningTotal)}  ·  🌆 Left: ${fmt(leftoverTotal)}  ·  💵 Cash ${fmt(e.cash)} + Debit ${fmt(e.debit)}</div>
-        <div class="meta" style="color:${Math.abs(recon)<0.005?'#1a7a36':'#b00020'}">
-          ${Math.abs(recon)<0.005 ? '✓ Balanced' : `⚠ Discrepancy ${fmt(recon)}`}
+        <div class="meta" style="color:${Math.abs(recon)<=5.005?'#1a7a36':recon>0?'#7a5200':'#b00020'}">
+          ${Math.abs(recon)<=5.005 ? '✅ Balanced' : `⚠ Discrepancy ${fmt(recon)}`}
         </div>`;
     } else {
       inv = `<div class="meta">💵 Cash ${fmt(e.cash)} + Debit ${fmt(e.debit)}</div>`;
@@ -1283,6 +1362,217 @@ initGlobalDate();
 renderPrimaryTabs();
 renderSubTabs();
 renderEntryView();
+
+//============================================================
+// GUIDED TOUR
+//============================================================
+const TOUR_SEEN_KEY = 'fcm_tourSeen_v1';
+
+const TOUR_STEPS = [
+  {
+    selector: '.header h1',
+    title: '👋 Welcome to Food Cart Manager',
+    body: 'Quick 60-second tour so you know where everything lives. Tap <b>Next</b> to walk through each feature — it\'ll highlight them one by one. You can skip anytime.',
+  },
+  {
+    selector: '.date-bar',
+    title: '🗓️ Set the day',
+    body: 'Tap the date to pick today (or any day). The bar glows red until you confirm — that way you never log entries against the wrong day by accident.',
+  },
+  {
+    selector: '#btn-lock-all',
+    title: '🔒 Lock & Save All + Wipe',
+    body: 'When the day is done, tap this. It locks every cart\'s entries for the day, saves them, and wipes the form clean for tomorrow.',
+  },
+  {
+    selector: '.primary-tabs',
+    title: '🚚 Pick a category',
+    body: 'Five categories across the top: Novelty Carts, Hot Dog Carts, Fry Truck, B&J Truck, Soft Serve Truck. Tap one to switch.',
+  },
+  {
+    selector: '.sub-tabs',
+    title: '🎨 Pick the specific cart',
+    body: 'Color-coded tabs for each individual cart in the chosen category. Tap one to log that cart\'s shift. Each cart\'s data is kept separate.',
+  },
+  {
+    selector: '.cart-banner',
+    title: '🏷️ Active cart',
+    body: 'This banner always shows which cart you\'re currently entering data for — so you don\'t accidentally type into the wrong cart.',
+  },
+  {
+    selector: '#f-location',
+    title: '📍 Location',
+    body: 'Where the cart was set up today. Pick from the list, or tap <b>＋ Add new…</b> to create a new location on the fly.',
+  },
+  {
+    selector: '#workers-list',
+    title: '👷 Workers + hours',
+    body: 'Add each worker who worked the shift, with start + end times. Tips you record below get split evenly across these workers automatically.',
+    fallbackSelector: 'label[for], #entry-form-content',
+  },
+  {
+    selector: '.section.morning',
+    title: '🌅 Morning inventory out',
+    body: 'Count what you load onto the cart in the morning. Each item × its price totals automatically into the <b>GRAND TOTAL OUT</b>.',
+  },
+  {
+    selector: '[data-field="cash"]',
+    title: '💵 Cash + Debit received',
+    body: 'Enter the totals at the end of the day. These are subtracted from morning inventory to figure out reconciliation.',
+  },
+  {
+    selector: '.section.evening',
+    title: '🌆 Evening leftovers',
+    body: 'Recount what came back unsold. The system uses this + cash + debit to reconcile against morning totals automatically.',
+  },
+  {
+    selector: '#recon-box',
+    title: '✅ Reconciliation',
+    body: '<b>Within $5</b> = giant green ✅ (balanced).<br><b>Over by more than $5</b> = yellow warning.<br><b>Under by more than $5</b> = red alert.',
+  },
+  {
+    selector: '.tips-box',
+    title: '💸 Tips',
+    body: 'Enter total tips. They auto-split evenly across the workers above. Tips don\'t affect reconciliation — they\'re just recorded for payout.',
+  },
+  {
+    selector: '#tour-help-btn',
+    title: '❓ This button is your friend',
+    body: 'Tap this floating <b>?</b> any time to replay this tour.',
+  },
+  {
+    selector: '.header .icons',
+    title: '💾 📋 ⚙️ One last thing — top icons',
+    body: '<b>💾 Export</b> — download all entries as CSV.<br><b>📋 Saved</b> — view and search past entries.<br><b>⚙️ Settings</b> — manage workers, locations, and cart names.<br><br>That\'s everything — you\'re ready to roll! Hit <b>Done</b> 🎉',
+  },
+];
+
+let tourIndex = 0;
+let tourActive = false;
+let highlightedEl = null;
+
+function findTourTarget(step) {
+  let el = document.querySelector(step.selector);
+  if (!el && step.fallbackSelector) el = document.querySelector(step.fallbackSelector);
+  return el;
+}
+
+function clearHighlight() {
+  if (highlightedEl) {
+    highlightedEl.classList.remove('tour-highlight');
+    highlightedEl = null;
+  }
+}
+
+function positionTooltip(target) {
+  const tt = $('tour-tooltip');
+  if (!target) {
+    tt.classList.remove('top');
+    tt.classList.add('bottom');
+    return;
+  }
+  const r = target.getBoundingClientRect();
+  const vh = window.innerHeight;
+  // If target is in bottom half of screen, put tooltip on top — else bottom.
+  const targetMid = r.top + r.height / 2;
+  if (targetMid > vh * 0.55) {
+    tt.classList.add('top');
+    tt.classList.remove('bottom');
+  } else {
+    tt.classList.add('bottom');
+    tt.classList.remove('top');
+  }
+}
+
+// Returns the index of the nearest visible step from i, searching in direction +1 or -1.
+// Returns -1 if no visible step found in that direction.
+function findVisibleStep(from, dir) {
+  let i = from;
+  while (i >= 0 && i < TOUR_STEPS.length) {
+    if (findTourTarget(TOUR_STEPS[i])) return i;
+    i += dir;
+  }
+  return -1;
+}
+
+function showTourStep(i, dir = 1) {
+  if (i < 0 || i >= TOUR_STEPS.length) { endTour(); return; }
+
+  const target = findTourTarget(TOUR_STEPS[i]);
+  if (!target) {
+    // Auto-skip: jump forward (or backward) to next visible step
+    const next = findVisibleStep(i + dir, dir);
+    if (next === -1) { endTour(); return; }
+    showTourStep(next, dir);
+    return;
+  }
+
+  tourIndex = i;
+  clearHighlight();
+  target.classList.add('tour-highlight');
+  highlightedEl = target;
+
+  const r = target.getBoundingClientRect();
+  if (r.top < 80 || r.bottom > window.innerHeight - 200) {
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // Count only visible steps for the step counter
+  const visibleSteps = TOUR_STEPS.map((s, idx) => ({ s, idx }))
+    .filter(({ s }) => !!findTourTarget(s));
+  const visiblePos = visibleSteps.findIndex(({ idx }) => idx === i) + 1;
+
+  $('tt-step').textContent = `STEP ${visiblePos} OF ${visibleSteps.length}`;
+  $('tt-title').innerHTML = TOUR_STEPS[i].title;
+  $('tt-body').innerHTML = TOUR_STEPS[i].body;
+
+  // Back button: find previous visible step
+  const prevVisible = findVisibleStep(i - 1, -1);
+  $('tt-prev').style.visibility = prevVisible === -1 ? 'hidden' : 'visible';
+
+  // Next button: check if any visible step remains after this
+  const nextVisible = findVisibleStep(i + 1, 1);
+  const isLast = nextVisible === -1;
+  const nextBtn = $('tt-next');
+  nextBtn.textContent = isLast ? '✓ Done' : 'Next ›';
+  nextBtn.className = isLast ? 'tt-done' : 'tt-next';
+
+  setTimeout(() => positionTooltip(target), 250);
+}
+
+function startTour() {
+  tourActive = true;
+  $('tour-overlay').classList.add('active');
+  $('tour-tooltip').style.display = 'block';
+  $('tour-help-btn').style.display = 'none';
+  showTourStep(0);
+}
+
+function endTour() {
+  tourActive = false;
+  clearHighlight();
+  $('tour-overlay').classList.remove('active');
+  $('tour-tooltip').style.display = 'none';
+  $('tour-help-btn').style.display = 'flex';
+  localStorage.setItem(TOUR_SEEN_KEY, '1');
+}
+
+$('tt-next').addEventListener('click', () => {
+  const nextVisible = findVisibleStep(tourIndex + 1, 1);
+  if (nextVisible === -1) endTour();
+  else showTourStep(nextVisible, 1);
+});
+$('tt-prev').addEventListener('click', () => {
+  const prevVisible = findVisibleStep(tourIndex - 1, -1);
+  if (prevVisible !== -1) showTourStep(prevVisible, -1);
+});
+$('tt-skip').addEventListener('click', endTour);
+$('tour-help-btn').addEventListener('click', startTour);
+
+// First-time auto-launch
+if (!localStorage.getItem(TOUR_SEEN_KEY)) {
+  setTimeout(startTour, 600);
+}
 </script>
 </body>
 </html>
