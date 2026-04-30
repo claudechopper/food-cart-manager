@@ -589,7 +589,7 @@
     <details>
       <summary>💲 Inventory items & prices</summary>
       <div style="font-size:0.9rem;color:#666;padding:10px 0">
-        Hardcoded for now. Edit the <code>PRICES</code> object in the file to change.
+        Tap any price to edit. Changes apply to new entries <b>and</b> recalculate totals on saved entries (export CSV first if you need a snapshot).
       </div>
       <div id="prices-display"></div>
     </details>
@@ -641,7 +641,7 @@ function colorFor(catKey, idx){
   return SOLO_COLOR[catKey] || '#007aff';
 }
 
-const PRICES = {
+const DEFAULT_PRICES = {
   novelty: [
     { name: 'Magnums',      price: 7 },
     { name: 'Novelties',    price: 5 },
@@ -671,7 +671,8 @@ const DEFAULTS = {
     softserve: ['Soft Serve Truck'],
   },
   entries: [],
-  paidShifts: []
+  paidShifts: [],
+  prices: DEFAULT_PRICES
 };
 
 function load(){
@@ -687,6 +688,11 @@ function load(){
       }
     }
     if (!Array.isArray(p.paidShifts)) p.paidShifts = [];
+    if (!p.prices || typeof p.prices !== 'object') p.prices = structuredClone(DEFAULT_PRICES);
+    // Ensure each known category exists in prices (don't clobber user edits)
+    for (const cat of Object.keys(DEFAULT_PRICES)) {
+      if (!Array.isArray(p.prices[cat])) p.prices[cat] = structuredClone(DEFAULT_PRICES[cat]);
+    }
     return p;
   } catch(e){ return structuredClone(DEFAULTS); }
 }
@@ -889,7 +895,7 @@ function renderFormHTML(e){
   `;
 
   if (HAS_INVENTORY(activeCategory)) {
-    const items = PRICES[activeCategory];
+    const items = state.prices[activeCategory];
     const morningRows = items.map(it => `
       <div class="item-line">
         <div class="name">${escapeHtml(it.name)}<span class="price">$${it.price.toFixed(2)} each</span></div>
@@ -1058,7 +1064,7 @@ function attachFormHandlers(draft){
 //============================================================
 function recalcAll(){
   if (HAS_INVENTORY(activeCategory)) {
-    const items = PRICES[activeCategory];
+    const items = state.prices[activeCategory];
     let morningTotal = 0;
     items.forEach(it => {
       const inp = document.querySelector(`[data-morning="${cssEscape(it.name)}"]`);
@@ -1384,7 +1390,7 @@ $('btn-lock-all').addEventListener('click', () => {
 //============================================================
 function entryRow(e){
   const cat = e.category || '';
-  const items = HAS_INVENTORY(cat) ? PRICES[cat] : [];
+  const items = HAS_INVENTORY(cat) ? state.prices[cat] : [];
   const morningTotal = items.reduce((s, it) => s + (e.morning?.[it.name] || 0) * it.price, 0);
   const leftoverTotal = items.reduce((s, it) => s + (e.evening?.[it.name] || 0) * it.price, 0);
   const recon = morningTotal - num(e.cash) - num(e.debit) - leftoverTotal;
@@ -1468,7 +1474,7 @@ function renderSaved(){
     const cat = CATEGORIES.find(c => c.key === e.category) || {emoji:'🚚'};
     const workers = (e.workers || []).filter(w => w.worker)
       .map(w => `${escapeHtml(w.worker)} (${w.start || '?'}–${w.end || '?'})`).join(', ');
-    const items = HAS_INVENTORY(e.category) ? PRICES[e.category] : [];
+    const items = HAS_INVENTORY(e.category) ? state.prices[e.category] : [];
     const morningTotal = items.reduce((s, it) => s + (e.morning?.[it.name] || 0) * it.price, 0);
     const leftoverTotal = items.reduce((s, it) => s + (e.evening?.[it.name] || 0) * it.price, 0);
     const recon = morningTotal - num(e.cash) - num(e.debit) - leftoverTotal;
@@ -1554,14 +1560,54 @@ function renderCartNameEditor(){
 }
 function renderPricesDisplay(){
   const wrap = $('prices-display');
-  wrap.innerHTML = Object.entries(PRICES).map(([cat, items]) => {
+  wrap.innerHTML = Object.entries(state.prices).map(([cat, items]) => {
     const c = CATEGORIES.find(x => x.key === cat);
-    const rows = items.map(it =>
-      `<div class="settings-row"><div class="name">${escapeHtml(it.name)}</div><b>$${it.price.toFixed(2)}</b></div>`
+    if (!c) return '';
+    const rows = items.map((it, i) =>
+      `<div class="settings-row">
+        <div class="name">${escapeHtml(it.name)}</div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="font-weight:700;color:#666">$</span>
+          <input type="number" inputmode="decimal" step="0.25" min="0"
+            value="${it.price}"
+            data-price-cat="${cat}" data-price-idx="${i}"
+            style="width:78px;padding:8px;text-align:right;font-weight:800;font-size:1rem">
+        </div>
+      </div>`
     ).join('');
     return `<div style="margin-top:8px"><b>${c.emoji} ${c.label}</b>
-      <div class="settings-list" style="margin-top:6px">${rows}</div></div>`;
+      <div class="settings-list" style="margin-top:6px">${rows}</div>
+      <button class="btn small secondary" style="margin-top:6px" onclick="resetPrices('${cat}')">↺ Reset ${c.label} prices to default</button>
+      </div>`;
   }).join('');
+  // Wire price inputs
+  wrap.querySelectorAll('input[data-price-cat]').forEach(inp => {
+    inp.addEventListener('change', () => updatePrice(inp.dataset.priceCat, +inp.dataset.priceIdx, inp.value));
+  });
+}
+
+function updatePrice(cat, idx, value){
+  const v = parseFloat(value);
+  if (isNaN(v) || v < 0) {
+    alert('Please enter a valid price (0 or higher).');
+    renderPricesDisplay();
+    return;
+  }
+  if (!state.prices[cat] || !state.prices[cat][idx]) return;
+  state.prices[cat][idx].price = Math.round(v * 100) / 100;
+  save();
+  toast('Price updated · ' + fmt(state.prices[cat][idx].price));
+  if (activeView === 'entry') renderEntryView();
+}
+
+function resetPrices(cat){
+  if (!DEFAULT_PRICES[cat]) return;
+  if (!confirm(`Reset all prices for this category back to defaults?`)) return;
+  state.prices[cat] = structuredClone(DEFAULT_PRICES[cat]);
+  save();
+  renderPricesDisplay();
+  if (activeView === 'entry') renderEntryView();
+  toast('Prices reset to defaults');
 }
 function renameCart(key, i, val){
   val = (val||'').trim();
