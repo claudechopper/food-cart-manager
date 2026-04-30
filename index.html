@@ -526,7 +526,7 @@
   <div class="header">
     <h1>🍦 Food Cart Manager</h1>
     <div class="icons">
-      <span id="sync-dot" title="Cloud sync status" style="display:none"></span>
+      <span id="sync-dot" title="Cloud sync status" style="display:none;cursor:pointer" onclick="if(lastSyncError)alert(lastSyncError);else alert('Last synced OK at '+(lastSyncedAt||'never'));"></span>
       <button class="icon-btn" id="icon-export" title="Export">💾</button>
       <button class="icon-btn" id="icon-saved" title="Saved entries">📋</button>
       <button class="icon-btn" id="icon-settings" title="Settings">⚙️</button>
@@ -764,6 +764,7 @@ function setSyncStatus(s) {
   dot.title = s === 'ok' ? 'Synced to cloud' : s === 'saving' ? 'Saving to cloud…' : 'Sync error — check connection';
 }
 
+let lastSyncError = '';
 async function syncToCloud() {
   if (!CLOUD_ENABLED) return;
   setSyncStatus('saving');
@@ -773,9 +774,9 @@ async function syncToCloud() {
       headers: { ...CLOUD_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
       body: JSON.stringify([{ id: 'main', state: state, updated_at: new Date().toISOString() }])
     });
-    if (r.ok) { lastSyncedAt = new Date().toISOString(); setSyncStatus('ok'); }
-    else setSyncStatus('error');
-  } catch(e) { setSyncStatus('error'); }
+    if (r.ok) { lastSyncedAt = new Date().toISOString(); lastSyncError=''; setSyncStatus('ok'); }
+    else { lastSyncError = `PUSH ${r.status}: ${(await r.text()).slice(0,300)}`; setSyncStatus('error'); }
+  } catch(e) { lastSyncError = `PUSH exception: ${e.message}`; setSyncStatus('error'); }
 }
 
 function normalizeState(p) {
@@ -799,22 +800,23 @@ async function pullFromCloud() {
   setSyncStatus('saving');
   try {
     const r = await fetch(`${CLOUD_REST}?id=eq.main&select=state,updated_at`, { headers: CLOUD_HEADERS });
-    if (!r.ok) { setSyncStatus('error'); return; }
+    if (!r.ok) { lastSyncError = `PULL ${r.status}: ${(await r.text()).slice(0,300)}`; setSyncStatus('error'); return; }
     const rows = await r.json();
     if (!rows || rows.length === 0 || !rows[0].state || Object.keys(rows[0].state).length === 0) {
       await syncToCloud(); return;
     }
     const remoteAt = rows[0].updated_at;
-    if (lastSyncedAt && remoteAt <= lastSyncedAt) { setSyncStatus('ok'); return; }
+    if (lastSyncedAt && remoteAt <= lastSyncedAt) { lastSyncError=''; setSyncStatus('ok'); return; }
     const wasEmpty = !lastSyncedAt;
     lastSyncedAt = remoteAt;
     normalizeState(rows[0].state);
     state = rows[0].state;
     localStorage.setItem(KEY, JSON.stringify(state));
     showView(activeView);
+    lastSyncError = '';
     setSyncStatus('ok');
     if (!wasEmpty) toast('↑ Synced from another device');
-  } catch(e) { setSyncStatus('error'); }
+  } catch(e) { lastSyncError = `PULL exception: ${e.message}`; setSyncStatus('error'); }
 }
 
 function startPolling() {
