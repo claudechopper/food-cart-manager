@@ -1414,6 +1414,12 @@ function attachFormHandlers(draft){
 function recalcAll(){
   if (HAS_INVENTORY(activeCategory)) {
     const items = state.prices[activeCategory];
+    const draft = state.entries.find(x =>
+      x.date === ($('global-date').value || todayStamp()) &&
+      x.cart === activeCartName() && !x.locked
+    );
+
+    // Morning
     let morningTotal = 0;
     items.forEach(it => {
       const inp = document.querySelector(`[data-morning="${cssEscape(it.name)}"]`);
@@ -1425,6 +1431,56 @@ function recalcAll(){
     });
     const mg = $('morning-grand'); if (mg) mg.textContent = fmt(morningTotal);
 
+    // Reload 1
+    let reload1Total = 0;
+    if (reload1Open) {
+      items.forEach(it => {
+        const inp = document.querySelector(`[data-reload="reload1"][data-item="${cssEscape(it.name)}"]`);
+        const cnt = inp ? num(inp.value) : 0;
+        const total = cnt * it.price;
+        reload1Total += total;
+        const cell = document.querySelector(`[data-reload-total="reload1-${cssEscape(it.name)}"]`);
+        if (cell) cell.textContent = fmt(total);
+      });
+      const r1g = $('reload1-grand'); if (r1g) r1g.textContent = fmt(reload1Total);
+    } else if (draft) {
+      // Not expanded but data may exist (auto-expanded on load)
+      items.forEach(it => { reload1Total += (draft.reload1?.[it.name] || 0) * it.price; });
+    }
+
+    // Reload 2
+    let reload2Total = 0;
+    if (reload2Open) {
+      items.forEach(it => {
+        const inp = document.querySelector(`[data-reload="reload2"][data-item="${cssEscape(it.name)}"]`);
+        const cnt = inp ? num(inp.value) : 0;
+        const total = cnt * it.price;
+        reload2Total += total;
+        const cell = document.querySelector(`[data-reload-total="reload2-${cssEscape(it.name)}"]`);
+        if (cell) cell.textContent = fmt(total);
+      });
+      const r2g = $('reload2-grand'); if (r2g) r2g.textContent = fmt(reload2Total);
+    } else if (draft) {
+      items.forEach(it => { reload2Total += (draft.reload2?.[it.name] || 0) * it.price; });
+    }
+
+    // Meals
+    let mealsTotal = 0;
+    if (mealsOpen) {
+      items.forEach(it => {
+        const inp = document.querySelector(`[data-meals="${cssEscape(it.name)}"]`);
+        const cnt = inp ? num(inp.value) : 0;
+        const total = cnt * it.price;
+        mealsTotal += total;
+        const cell = document.querySelector(`[data-meals-total="${cssEscape(it.name)}"]`);
+        if (cell) cell.textContent = fmt(total);
+      });
+      const mgg = $('meals-grand'); if (mgg) mgg.textContent = fmt(mealsTotal);
+    } else if (draft) {
+      items.forEach(it => { mealsTotal += (draft.meals?.[it.name] || 0) * it.price; });
+    }
+
+    // Leftover
     let leftoverTotal = 0;
     items.forEach(it => {
       const inp = document.querySelector(`[data-evening="${cssEscape(it.name)}"]`);
@@ -1436,24 +1492,28 @@ function recalcAll(){
     });
     const lg = $('leftover-grand'); if (lg) lg.textContent = fmt(leftoverTotal);
 
-    const cash = num(document.querySelector('[data-field="cash"]')?.value);
+    const totalDispatched = morningTotal + reload1Total + reload2Total;
+    const dg = $('dispatched-grand'); if (dg) dg.textContent = fmt(totalDispatched);
+
+    const cash  = num(document.querySelector('[data-field="cash"]')?.value);
     const debit = num(document.querySelector('[data-field="debit"]')?.value);
-    const diff = morningTotal - cash - debit - leftoverTotal;
-    const box = $('recon-box');
-    const status = $('recon-status');
+    const diff  = totalDispatched - cash - debit - leftoverTotal - mealsTotal;
+    const box     = $('recon-box');
+    const status  = $('recon-status');
     const formula = $('recon-formula');
     if (box) {
       const absDiff = Math.abs(diff);
       const matched = absDiff <= 5.005;
-      const over = !matched && diff > 0;
-      const under = !matched && diff < 0;
-      box.classList.toggle('match', matched);
-      box.classList.toggle('diff-over', over);
+      const over    = !matched && diff > 0;
+      const under   = !matched && diff < 0;
+      box.classList.toggle('match',      matched);
+      box.classList.toggle('diff-over',  over);
       box.classList.toggle('diff-under', under);
       const ck = $('recon-checkmark');
       if (ck) ck.style.display = matched ? 'block' : 'none';
-      status.textContent = matched ? 'Balanced' : `⚠ Discrepancy: ${diff > 0 ? '+' : ''}${fmt(diff)}`;
-      formula.textContent = `${fmt(morningTotal)} − ${fmt(cash)} − ${fmt(debit)} − ${fmt(leftoverTotal)} = ${fmt(diff)}`;
+      status.textContent  = matched ? 'Balanced' : `⚠ Discrepancy: ${diff > 0 ? '+' : ''}${fmt(diff)}`;
+      const mealsLabel = mealsTotal > 0 ? ` − Meals ${fmt(mealsTotal)}` : '';
+      formula.textContent = `${fmt(totalDispatched)} − ${fmt(cash)} − ${fmt(debit)} − Leftover ${fmt(leftoverTotal)}${mealsLabel} = ${fmt(diff)}`;
     }
   }
 
