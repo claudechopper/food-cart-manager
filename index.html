@@ -762,7 +762,8 @@ function showView(v){
   $('view-payroll').style.display  = v === 'payroll'  ? '' : 'none';
   $('view-saved').style.display    = v === 'saved'    ? '' : 'none';
   $('view-settings').style.display = v === 'settings' ? '' : 'none';
-  $('primary-tabs').style.display  = (v === 'entry' || v === 'payroll') ? '' : 'none';
+  // Keep primary tabs visible everywhere so the user can always navigate home
+  $('primary-tabs').style.display  = '';
   $('sub-tabs').style.display      = (v === 'entry' && state.carts[activeCategory].length > 1) ? '' : 'none';
   $('icon-saved').classList.toggle('active', v === 'saved');
   $('icon-settings').classList.toggle('active', v === 'settings');
