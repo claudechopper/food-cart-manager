@@ -426,8 +426,10 @@
       </div>
     </div>
 
-    <label>Inventory sent out</label>
-    <div class="card" id="e-items"></div>
+    <div id="e-inventory-section">
+      <label>Inventory sent out</label>
+      <div class="card" id="e-items"></div>
+    </div>
 
     <label>Notes</label>
     <textarea id="e-notes" placeholder="Anything worth noting..."></textarea>
@@ -635,6 +637,9 @@ function renderEntryView(){
 
   fillSelect('e-location', state.locations, '— Select location —');
   fillSelect('e-worker', state.workers, '— Select worker —');
+
+  const hasInventory = ['novelty', 'hotdog'].includes(activeCategory);
+  $('e-inventory-section').style.display = hasInventory ? '' : 'none';
 
   refreshRequiredGlow();
 
