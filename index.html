@@ -234,15 +234,14 @@
   }
   .worker-row select, .worker-row input { padding: 10px; font-size: 0.95rem; }
 
-  /* clock icon on time inputs */
+  /* clock icon beside time selects */
   .time-wrap {
-    position: relative; display: flex; align-items: center;
+    display: flex; align-items: center; gap: 4px;
   }
-  .time-icon {
-    position: absolute; left: 7px; font-size: 0.9rem;
-    pointer-events: none; z-index: 1; line-height: 1;
+  .time-icon { font-size: 0.85rem; flex-shrink: 0; }
+  .worker-row .time-wrap select {
+    flex: 1; min-width: 0; padding: 10px 2px; font-size: 0.8rem;
   }
-  .worker-row .time-wrap input[type="time"] { padding-left: 28px; width: 100%; }
 
   .worker-row .x {
     background: none; border: 2px solid #ff3b30; color: #ff3b30;
@@ -379,6 +378,19 @@
   }
   .payroll-shift-row:last-child { border-bottom: none; }
   .payroll-shift-row.paying { opacity: 0.25; }
+
+  .payroll-pay-all-btn {
+    background: #34c759; color: #fff; border: none; border-radius: 8px;
+    padding: 7px 12px; font-size: 0.85rem; font-weight: 800; cursor: pointer;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .payroll-pay-all-btn:active { opacity: 0.75; }
+  .payroll-pay-one-btn {
+    background: #e5e5ea; color: #111; border: none; border-radius: 8px;
+    padding: 6px 10px; font-size: 0.8rem; font-weight: 700; cursor: pointer;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .payroll-pay-one-btn:active { background: #34c759; color: #fff; }
 
   .payroll-check {
     width: 22px; height: 22px; cursor: pointer; flex-shrink: 0;
@@ -745,6 +757,14 @@ function num(v){ const n = parseFloat(v); return isNaN(n) ? 0 : n; }
 //============================================================
 // PAYROLL HELPERS
 //============================================================
+function fmt12(t){
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const ampm = h < 12 ? 'AM' : 'PM';
+  const displayH = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${displayH}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
 function calcHours(start, end){
   if (!start || !end) return null;
   const [sh, sm] = start.split(':').map(Number);
@@ -977,6 +997,21 @@ function renderFormHTML(e){
   return html;
 }
 
+function timeSelectHTML(selected, field, idx){
+  let opts = '<option value="">— time —</option>';
+  for (let h = 5; h < 24; h++) {
+    for (let m = 0; m < 60; m += 5) {
+      const hh = String(h).padStart(2, '0');
+      const mm = String(m).padStart(2, '0');
+      const val = `${hh}:${mm}`;
+      const displayH = h === 12 ? 12 : h > 12 ? h - 12 : h;
+      const ampm = h < 12 ? 'AM' : 'PM';
+      opts += `<option value="${val}"${val === selected ? ' selected' : ''}>${displayH}:${mm} ${ampm}</option>`;
+    }
+  }
+  return `<select data-worker-field="${field}" data-idx="${idx}">${opts}</select>`;
+}
+
 function renderWorkerRowHTML(w, i){
   const opts = renderSelectOptions(state.workers, w.worker);
   return `
@@ -986,8 +1021,8 @@ function renderWorkerRowHTML(w, i){
         ${opts}
         <option value="__add_worker__">＋ Add new…</option>
       </select>
-      <label class="time-wrap"><span class="time-icon">🕐</span><input type="time" step="300" data-worker-field="start" data-idx="${i}" value="${w.start || ''}" placeholder="Start"></label>
-      <label class="time-wrap"><span class="time-icon">🕐</span><input type="time" step="300" data-worker-field="end" data-idx="${i}" value="${w.end || ''}" placeholder="End"></label>
+      <div class="time-wrap"><span class="time-icon">🕐</span>${timeSelectHTML(w.start, 'start', i)}</div>
+      <div class="time-wrap"><span class="time-icon">🕐</span>${timeSelectHTML(w.end, 'end', i)}</div>
       <button class="x" data-remove-worker="${i}" title="Remove">✕</button>
     </div>
   `;
@@ -1208,26 +1243,32 @@ function renderPayroll(){
     for (const [worker, shifts] of Object.entries(byWorker)) {
       const workerTotal = shifts.reduce((s, sh) => s + (sh.hours || 0), 0);
       const sortedShifts = shifts.slice().sort((a, b) => a.date.localeCompare(b.date));
+      const workerShiftIds = sortedShifts.map(s => escapeHtml(s.shiftId)).join(',');
       html += `<div class="payroll-worker-block">
         <div class="payroll-worker-header">
           <label class="payroll-select-all-wrap">
             <input type="checkbox" class="payroll-select-all" data-worker="${escapeHtml(worker)}">
             <span class="payroll-worker-name">👤 ${escapeHtml(worker)}</span>
           </label>
-          <span class="payroll-worker-owed" id="worker-owed-${escapeHtml(worker)}">${fmtHours(workerTotal)} owed</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="payroll-worker-owed">${fmtHours(workerTotal)}</span>
+            <button class="payroll-pay-all-btn" data-pay-worker="${escapeHtml(worker)}">✓ Pay All</button>
+          </div>
         </div>`;
       for (const shift of sortedShifts) {
         const cat = CATEGORIES.find(c => c.key === shift.category);
+        const timeRange = (shift.start && shift.end) ? ` · ${fmt12(shift.start)}–${fmt12(shift.end)}` : '';
         html += `<div class="payroll-shift-row" data-shift-id="${escapeHtml(shift.shiftId)}">
           <input type="checkbox" class="payroll-check"
             data-shift-id="${escapeHtml(shift.shiftId)}"
             data-worker="${escapeHtml(shift.worker)}"
             data-hours="${shift.hours !== null ? shift.hours : 0}">
           <div class="payroll-shift-info">
-            <span class="payroll-shift-date">${shift.date}</span>
+            <span class="payroll-shift-date">${shift.date}${timeRange}</span>
             <span class="payroll-shift-cart">${cat ? cat.emoji : ''} ${escapeHtml(shift.cart)}</span>
           </div>
           <span class="payroll-shift-hrs">${fmtHours(shift.hours)}</span>
+          <button class="payroll-pay-one-btn" data-pay-shift="${escapeHtml(shift.shiftId)}">Pay</button>
         </div>`;
       }
       html += '</div>';
@@ -1270,10 +1311,11 @@ function renderPayroll(){
       const sorted = shifts.slice().sort((a, b) => (b.paidAt || '').localeCompare(a.paidAt || ''));
       for (const shift of sorted) {
         const cat = CATEGORIES.find(c => c.key === shift.category);
+        const paidTimeRange = (shift.start && shift.end) ? ` · ${fmt12(shift.start)}–${fmt12(shift.end)}` : '';
         aHtml += `<div class="payroll-paid-row">
           <span class="payroll-paid-check">✓</span>
           <div class="payroll-paid-info">
-            <span class="payroll-paid-date">${shift.date}</span>
+            <span class="payroll-paid-date">${shift.date}${paidTimeRange}</span>
             <span class="payroll-paid-cart">${cat ? cat.emoji : ''} ${escapeHtml(shift.cart)}</span>
           </div>
           <span class="payroll-paid-hrs">${fmtHours(shift.hours)}</span>
@@ -1308,7 +1350,32 @@ function wirePayrollHandlers(allShifts){
     });
   });
 
-  // Pay selected button
+  // Pay All button (per worker block)
+  document.querySelectorAll('.payroll-pay-all-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const worker = btn.dataset.payWorker;
+      const workerShifts = allShifts.filter(s => {
+        const paidIds = new Set((state.paidShifts || []).map(p => p.shiftId));
+        return s.worker === worker && !paidIds.has(s.shiftId);
+      });
+      if (workerShifts.length === 0) return;
+      if (!confirm(`Mark all ${workerShifts.length} shift${workerShifts.length !== 1 ? 's' : ''} for ${worker} as paid?`)) return;
+      payShifts(workerShifts.map(s => s.shiftId), allShifts);
+    });
+  });
+
+  // Pay single shift button
+  document.querySelectorAll('.payroll-pay-one-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const shiftId = btn.dataset.payShift;
+      const shift = allShifts.find(s => s.shiftId === shiftId);
+      if (!shift) return;
+      if (!confirm(`Mark ${shift.worker}'s shift on ${shift.date} as paid?`)) return;
+      payShifts([shiftId], allShifts);
+    });
+  });
+
+  // Pay selected (bulk checkbox) button
   const payBtn = $('btn-pay-selected');
   if (payBtn) {
     payBtn.onclick = () => {
@@ -1378,9 +1445,7 @@ $('btn-lock-all').addEventListener('click', () => {
     alert('Nothing to lock — no entries for ' + date + ' yet.');
     return;
   }
-  if (!confirm(`Lock & save all ${todays.length} entr${todays.length === 1 ? 'y' : 'ies'} for ${date}?\n\nThis will download a CSV and clear the forms for the next day.`)) return;
-
-  downloadDayCSV(date);
+  if (!confirm(`Lock & save all ${todays.length} entr${todays.length === 1 ? 'y' : 'ies'} for ${date}?\n\nForms will clear ready for the next day.`)) return;
 
   todays.forEach(e => {
     e.locked = true;
@@ -1392,7 +1457,7 @@ $('btn-lock-all').addEventListener('click', () => {
   initGlobalDate();
 
   renderEntryView();
-  toast('🔒 Locked ' + todays.length + ' entries · CSV downloaded');
+  toast('🔒 Locked ' + todays.length + ' entries');
 });
 
 //============================================================
