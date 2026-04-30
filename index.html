@@ -144,10 +144,26 @@
 
   .card {
     background: #fff; border-radius: 12px; padding: 14px;
-    margin-bottom: 12px; border: 1px solid #e5e5ea;
+    margin-bottom: 10px; border: 1px solid #e5e5ea;
   }
   .card h3 { margin: 0 0 6px 0; font-size: 1.1rem; }
   .card .meta { color: #666; font-size: 0.9rem; margin-bottom: 8px; }
+
+  /* DATE GROUPS in saved view */
+  .date-group { margin-bottom: 14px; }
+  .date-group-header {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #1c1c1e; color: #fff; border-radius: 10px;
+    padding: 11px 14px; cursor: pointer; font-weight: 700;
+    margin-bottom: 6px; user-select: none; -webkit-user-select: none;
+    font-size: 0.95rem;
+  }
+  .date-group-header:active { opacity: 0.75; }
+  .date-group-right { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; opacity: 0.8; }
+  .date-group-arrow { font-size: 0.7rem; }
+  .date-group-csv { font-size: 0.75rem; background: rgba(255,255,255,0.15);
+    border: none; color: #fff; border-radius: 6px; padding: 3px 8px; cursor: pointer; }
+  .date-group-csv:active { opacity: 0.7; }
 
   /* SECTION boxes (morning + evening) */
   .section {
@@ -1692,48 +1708,81 @@ $('btn-export-json').addEventListener('click', () => {
 //============================================================
 // SAVED VIEW
 //============================================================
+let collapsedDates = new Set();
+
+function renderEntryCard(e){
+  const cat = CATEGORIES.find(c => c.key === e.category) || {emoji:'🚚'};
+  const workers = (e.workers || []).filter(w => w.worker)
+    .map(w => `${escapeHtml(w.worker)} (${fmt12(w.start) || '?'}–${fmt12(w.end) || '?'})`).join(', ');
+  const items = HAS_INVENTORY(e.category) ? state.prices[e.category] : [];
+  const morningTotal = items.reduce((s, it) => s + (e.morning?.[it.name] || 0) * it.price, 0);
+  const leftoverTotal = items.reduce((s, it) => s + (e.evening?.[it.name] || 0) * it.price, 0);
+  const recon = morningTotal - num(e.cash) - num(e.debit) - leftoverTotal;
+  let inv = '';
+  if (HAS_INVENTORY(e.category)) {
+    inv = `
+      <div class="meta">🌅 Out: ${fmt(morningTotal)} · 🌆 Left: ${fmt(leftoverTotal)} · 💵 Cash ${fmt(e.cash)} + Debit ${fmt(e.debit)}</div>
+      <div class="meta" style="color:${Math.abs(recon)<=5.005?'#1a7a36':recon>0?'#7a5200':'#b00020'}">
+        ${Math.abs(recon)<=5.005 ? '✅ Balanced' : `⚠ Discrepancy ${fmt(recon)}`}
+      </div>`;
+  } else {
+    inv = `<div class="meta">💵 Cash ${fmt(e.cash)} + Debit ${fmt(e.debit)}</div>`;
+  }
+  return `<div class="card">
+    <h3>${cat.emoji} ${escapeHtml(e.cart)} ${e.locked ? '<span class="pill">LOCKED</span>' : '<span class="pill" style="background:#ff9500">DRAFT</span>'}</h3>
+    <div class="meta">📍 ${escapeHtml(e.location || '—')}</div>
+    <div class="meta">👤 ${workers || '—'}</div>
+    ${inv}
+    <div class="meta">💰 Tips ${fmt(e.tips)}</div>
+    ${e.notes ? `<div class="meta" style="margin-top:6px">📝 ${escapeHtml(e.notes)}</div>`:''}
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn small danger" onclick="deleteEntry('${e.id}')">Delete</button>
+    </div>
+  </div>`;
+}
+
+function toggleDateGroup(date){
+  if (collapsedDates.has(date)) collapsedDates.delete(date);
+  else collapsedDates.add(date);
+  renderSaved();
+}
+
 function renderSaved(){
   const list = $('saved-list');
   const filter = $('filter-date').value;
   const entries = state.entries
     .filter(e => !filter || e.date === filter)
-    .sort((a,b) => (b.date+'-'+b.createdAt).localeCompare(a.date+'-'+a.createdAt));
+    .sort((a,b) => (b.date+'-'+(b.createdAt||'')).localeCompare(a.date+'-'+(a.createdAt||'')));
 
   if (entries.length === 0){
     list.innerHTML = '<div class="empty">No entries yet.</div>';
     return;
   }
 
-  list.innerHTML = entries.map(e => {
-    const cat = CATEGORIES.find(c => c.key === e.category) || {emoji:'🚚'};
-    const workers = (e.workers || []).filter(w => w.worker)
-      .map(w => `${escapeHtml(w.worker)} (${w.start || '?'}–${w.end || '?'})`).join(', ');
-    const items = HAS_INVENTORY(e.category) ? state.prices[e.category] : [];
-    const morningTotal = items.reduce((s, it) => s + (e.morning?.[it.name] || 0) * it.price, 0);
-    const leftoverTotal = items.reduce((s, it) => s + (e.evening?.[it.name] || 0) * it.price, 0);
-    const recon = morningTotal - num(e.cash) - num(e.debit) - leftoverTotal;
+  // Group by date, newest first
+  const byDate = {};
+  for (const e of entries){
+    if (!byDate[e.date]) byDate[e.date] = [];
+    byDate[e.date].push(e);
+  }
+  const dates = Object.keys(byDate).sort((a,b) => b.localeCompare(a));
 
-    let inv = '';
-    if (HAS_INVENTORY(e.category)) {
-      inv = `
-        <div class="meta">🌅 Out: ${fmt(morningTotal)}  ·  🌆 Left: ${fmt(leftoverTotal)}  ·  💵 Cash ${fmt(e.cash)} + Debit ${fmt(e.debit)}</div>
-        <div class="meta" style="color:${Math.abs(recon)<=5.005?'#1a7a36':recon>0?'#7a5200':'#b00020'}">
-          ${Math.abs(recon)<=5.005 ? '✅ Balanced' : `⚠ Discrepancy ${fmt(recon)}`}
-        </div>`;
-    } else {
-      inv = `<div class="meta">💵 Cash ${fmt(e.cash)} + Debit ${fmt(e.debit)}</div>`;
-    }
-
-    return `<div class="card">
-      <h3>${cat.emoji} ${escapeHtml(e.cart)} ${e.locked ? '<span class="pill">LOCKED</span>' : '<span class="pill" style="background:#ff9500">DRAFT</span>'}</h3>
-      <div class="meta">📅 ${escapeHtml(e.date)} · 📍 ${escapeHtml(e.location || '—')}</div>
-      <div class="meta">👤 ${workers || '—'}</div>
-      ${inv}
-      <div class="meta">💰 Tips ${fmt(e.tips)}</div>
-      ${e.notes ? `<div class="meta" style="margin-top:6px">📝 ${escapeHtml(e.notes)}</div>`:''}
-      <div style="display:flex;gap:8px;margin-top:10px">
-        <button class="btn small danger" onclick="deleteEntry('${e.id}')">Delete</button>
+  list.innerHTML = dates.map(date => {
+    const grp = byDate[date];
+    const collapsed = collapsedDates.has(date);
+    const [y,m,d] = date.split('-');
+    const label = new Date(+y, +m-1, +d).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+    const count = grp.length;
+    return `<div class="date-group">
+      <div class="date-group-header" onclick="toggleDateGroup('${date}')">
+        <span>📅 ${label}</span>
+        <span class="date-group-right">
+          <span>${count} entr${count===1?'y':'ies'}</span>
+          <button class="date-group-csv" onclick="event.stopPropagation();downloadDayCSV('${date}')">⬇ CSV</button>
+          <span class="date-group-arrow">${collapsed ? '▶' : '▼'}</span>
+        </span>
       </div>
+      ${collapsed ? '' : `<div class="date-group-entries">${grp.map(renderEntryCard).join('')}</div>`}
     </div>`;
   }).join('');
 }
