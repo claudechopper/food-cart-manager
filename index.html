@@ -1268,7 +1268,7 @@ function renderPayroll(){
             <span class="payroll-shift-cart">${cat ? cat.emoji : ''} ${escapeHtml(shift.cart)}</span>
           </div>
           <span class="payroll-shift-hrs">${fmtHours(shift.hours)}</span>
-          <button class="payroll-pay-one-btn" data-pay-shift="${escapeHtml(shift.shiftId)}">Pay</button>
+          <button class="payroll-pay-one-btn" data-pay-shift="${escapeHtml(shift.shiftId)}">Pay this day only</button>
         </div>`;
       }
       html += '</div>';
