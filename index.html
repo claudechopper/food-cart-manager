@@ -155,14 +155,102 @@
     font-size: 1rem;
     white-space: nowrap;
   }
-  .date-bar input[type="date"] {
+  /* date display button (opens custom calendar) */
+  .date-display {
     flex: 1;
-    font-size: 1.15rem;
+    font-size: 1.1rem;
     font-weight: 700;
-    padding: 12px;
+    padding: 12px 14px;
     border: 3px solid #d1d1d6;
     border-radius: 10px;
+    background: #fff;
+    color: #111;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
   }
+
+  /* === CUSTOM CALENDAR OVERLAY === */
+  .dp-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 2000;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .dp-sheet {
+    background: #f5f5f7;
+    border-radius: 22px 22px 0 0;
+    width: 100%;
+    max-width: 640px;
+    padding: 10px 8px 30px;
+    max-height: 94vh;
+    overflow-y: auto;
+  }
+  .dp-handle {
+    width: 40px; height: 5px; border-radius: 3px;
+    background: #ccc; margin: 0 auto 14px;
+  }
+  .dp-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding: 0 4px;
+  }
+  .dp-nav {
+    background: #fff;
+    border: 2px solid #d1d1d6;
+    border-radius: 12px;
+    font-size: 2.2rem;
+    font-weight: 700;
+    padding: 6px 22px;
+    cursor: pointer;
+    line-height: 1;
+    color: #111;
+  }
+  .dp-month-label { font-size: 1.6rem; font-weight: 800; text-align: center; }
+  .dp-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+    margin-bottom: 4px;
+  }
+  .dp-weekdays span {
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #888;
+    padding: 4px 0;
+  }
+  .dp-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+    margin-bottom: 14px;
+  }
+  .dp-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    border-radius: 12px;
+    cursor: pointer;
+    background: #fff;
+    border: 2px solid transparent;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .dp-day:active { transform: scale(0.92); }
+  .dp-day.other-month { color: #d0d0d5; background: transparent; pointer-events: none; }
+  .dp-day.dp-today { border-color: #007aff; color: #007aff; }
+  .dp-day.dp-selected { background: #007aff; color: #fff; border-color: #007aff; font-weight: 800; }
+  .dp-actions { display: flex; gap: 10px; padding: 0 4px; }
+  .dp-actions .btn { margin-top: 0; }
   /* Hard glow — really loud */
   .date-master-glow {
     border-color: #ff3b30 !important;
@@ -289,7 +377,29 @@
   <!-- GLOBAL DATE — applies to every entry until changed -->
   <div class="date-bar">
     <span class="date-label">🗓️ Date:</span>
-    <input type="date" id="global-date">
+    <button type="button" id="date-display" class="date-display">Tap to set date</button>
+    <input type="hidden" id="global-date">
+  </div>
+
+  <!-- Custom calendar bottom sheet -->
+  <div id="dp-overlay" class="dp-overlay" style="display:none">
+    <div class="dp-sheet" id="dp-sheet">
+      <div class="dp-handle"></div>
+      <div class="dp-header">
+        <button class="dp-nav" id="dp-prev">‹</button>
+        <div class="dp-month-label" id="dp-month-label"></div>
+        <button class="dp-nav" id="dp-next">›</button>
+      </div>
+      <div class="dp-weekdays">
+        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>
+        <span>Thu</span><span>Fri</span><span>Sat</span>
+      </div>
+      <div class="dp-grid" id="dp-grid"></div>
+      <div class="dp-actions">
+        <button class="btn secondary" id="dp-cancel">Cancel</button>
+        <button class="btn success" id="dp-confirm">✓ Confirm Date</button>
+      </div>
+    </div>
   </div>
 
   <div class="primary-tabs" id="primary-tabs"></div>
@@ -831,29 +941,107 @@ $('restore-file').addEventListener('change', (ev) => {
   r.readAsText(f);
 });
 
-// === GLOBAL DATE (applies to every entry) ===
+// === CUSTOM CALENDAR DATE PICKER ===
 const DATE_KEY = 'fcm_globalDate';
 const DATE_CONFIRMED_KEY = 'fcm_dateConfirmedOn';
+const MONTH_NAMES = ['January','February','March','April','May','June',
+                     'July','August','September','October','November','December'];
+
+let dpYear, dpMonth, dpSelected;
 
 function initGlobalDate(){
   const today = todayStamp();
   const lastDate = localStorage.getItem(DATE_KEY);
   const lastConfirmed = localStorage.getItem(DATE_CONFIRMED_KEY);
   const needsConfirm = lastConfirmed !== today;
-  const inp = $('global-date');
-  inp.value = needsConfirm ? today : (lastDate || today);
-  inp.classList.toggle('date-master-glow', needsConfirm);
+  dpSelected = needsConfirm ? today : (lastDate || today);
+  $('global-date').value = dpSelected;
+  updateDateDisplay(dpSelected, needsConfirm);
 }
-$('global-date').addEventListener('change', () => {
-  localStorage.setItem(DATE_KEY, $('global-date').value);
-  localStorage.setItem(DATE_CONFIRMED_KEY, todayStamp());
-  $('global-date').classList.remove('date-master-glow');
+
+function updateDateDisplay(dateStr, glow){
+  const btn = $('date-display');
+  if (!dateStr) {
+    btn.textContent = 'Tap to set date';
+  } else {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    btn.textContent = MONTH_NAMES[m - 1] + ' ' + d + ', ' + y;
+  }
+  btn.classList.toggle('date-master-glow', !!glow);
+}
+
+function openDatePicker(){
+  const base = dpSelected ? new Date(dpSelected + 'T12:00:00') : new Date();
+  dpYear = base.getFullYear();
+  dpMonth = base.getMonth();
+  renderCalendarGrid();
+  $('dp-overlay').style.display = 'flex';
+}
+
+function closeDatePicker(){
+  $('dp-overlay').style.display = 'none';
+}
+
+function renderCalendarGrid(){
+  $('dp-month-label').textContent = MONTH_NAMES[dpMonth] + ' ' + dpYear;
+  const grid = $('dp-grid');
+  grid.innerHTML = '';
+  const today = todayStamp();
+  const firstWeekday = new Date(dpYear, dpMonth, 1).getDay();
+  const daysInMonth = new Date(dpYear, dpMonth + 1, 0).getDate();
+  const daysInPrev = new Date(dpYear, dpMonth, 0).getDate();
+
+  // trailing days from previous month (greyed out, not tappable)
+  for (let i = firstWeekday - 1; i >= 0; i--) {
+    const cell = document.createElement('div');
+    cell.className = 'dp-day other-month';
+    cell.textContent = daysInPrev - i;
+    grid.appendChild(cell);
+  }
+  // days of this month
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = dpYear + '-' + String(dpMonth + 1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    const cell = document.createElement('div');
+    cell.className = 'dp-day';
+    if (ds === today) cell.classList.add('dp-today');
+    if (ds === dpSelected) cell.classList.add('dp-selected');
+    cell.textContent = d;
+    cell.onclick = () => { dpSelected = ds; renderCalendarGrid(); };
+    grid.appendChild(cell);
+  }
+  // leading days of next month (greyed out)
+  const totalCells = Math.ceil((firstWeekday + daysInMonth) / 7) * 7;
+  for (let d = 1; d <= totalCells - firstWeekday - daysInMonth; d++) {
+    const cell = document.createElement('div');
+    cell.className = 'dp-day other-month';
+    cell.textContent = d;
+    grid.appendChild(cell);
+  }
+}
+
+$('date-display').addEventListener('click', openDatePicker);
+$('dp-prev').addEventListener('click', () => {
+  if (--dpMonth < 0) { dpMonth = 11; dpYear--; }
+  renderCalendarGrid();
 });
-$('global-date').addEventListener('focus', () => {
-  // Tapping it counts as engaging — drop the glow as soon as they interact
-  localStorage.setItem(DATE_CONFIRMED_KEY, todayStamp());
-  $('global-date').classList.remove('date-master-glow');
+$('dp-next').addEventListener('click', () => {
+  if (++dpMonth > 11) { dpMonth = 0; dpYear++; }
+  renderCalendarGrid();
 });
+$('dp-cancel').addEventListener('click', closeDatePicker);
+$('dp-confirm').addEventListener('click', () => {
+  if (!dpSelected) { alert('Please tap a day first.'); return; }
+  $('global-date').value = dpSelected;
+  localStorage.setItem(DATE_KEY, dpSelected);
+  localStorage.setItem(DATE_CONFIRMED_KEY, todayStamp());
+  updateDateDisplay(dpSelected, false);
+  closeDatePicker();
+});
+// tap outside the sheet to dismiss
+$('dp-overlay').addEventListener('click', e => {
+  if (e.target === $('dp-overlay')) closeDatePicker();
+});
+$('dp-sheet').addEventListener('click', e => e.stopPropagation());
 
 // 💾 quick export — jumps to Saved view so user can hit CSV/JSON
 $('icon-export').addEventListener('click', () => showView(activeView === 'saved' ? 'entry' : 'saved'));
