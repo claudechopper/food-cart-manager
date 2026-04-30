@@ -1214,9 +1214,12 @@ function renderFormHTML(e){
   if (activeCategory === 'hotdog' && e.category !== 'combo') {
     const noveltyCartNames = state.carts.novelty || [];
     const bjCartNames      = state.carts.benjerry || [];
+    // Only show combo options for categories that have inventory items defined
+    const noveltyHasItems = Array.isArray(state.prices.novelty)  && state.prices.novelty.length  > 0;
+    const bjHasItems      = Array.isArray(state.prices.benjerry) && state.prices.benjerry.length > 0;
     const comboTargets = [
-      ...noveltyCartNames.map(n => ({ label: `🍦 ${n}`, category: 'novelty', name: n })),
-      ...bjCartNames.map(n      => ({ label: `🍨 ${n}`, category: 'benjerry', name: n })),
+      ...(noveltyHasItems ? noveltyCartNames.map(n => ({ label: `🍦 ${n}`, category: 'novelty',  name: n })) : []),
+      ...(bjHasItems      ? bjCartNames.map(n      => ({ label: `🍨 ${n}`, category: 'benjerry', name: n })) : []),
     ];
     if (comboTargets.length > 0) {
       const targetOpts = comboTargets.map((t, i) =>
