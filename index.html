@@ -686,6 +686,7 @@ const CLOUD_HEADERS = {
   'Content-Type': 'application/json'
 };
 let lastSyncedAt = null;
+let initialPullDone = false; // Block pushes until we've pulled once
 // ──────────────────────────────────────────────────────────────
 
 //============================================================
@@ -782,7 +783,7 @@ function setSyncStatus(s) {
 
 let lastSyncError = '';
 async function syncToCloud() {
-  if (!CLOUD_ENABLED) return;
+  if (!CLOUD_ENABLED || !initialPullDone) return;
   setSyncStatus('saving');
   try {
     const r = await fetch(CLOUD_REST, {
@@ -819,20 +820,27 @@ async function pullFromCloud() {
     if (!r.ok) { lastSyncError = `PULL ${r.status}: ${(await r.text()).slice(0,300)}`; setSyncStatus('error'); return; }
     const rows = await r.json();
     if (!rows || rows.length === 0 || !rows[0].state || Object.keys(rows[0].state).length === 0) {
+      initialPullDone = true; // Remote is empty — safe to push local data up
       await syncToCloud(); return;
     }
     const remoteAt = rows[0].updated_at;
-    if (lastSyncedAt && remoteAt <= lastSyncedAt) { lastSyncError=''; setSyncStatus('ok'); return; }
+    if (lastSyncedAt && remoteAt <= lastSyncedAt) {
+      initialPullDone = true; lastSyncError=''; setSyncStatus('ok'); return;
+    }
     const wasEmpty = !lastSyncedAt;
     lastSyncedAt = remoteAt;
     normalizeState(rows[0].state);
     state = rows[0].state;
     localStorage.setItem(KEY, JSON.stringify(state));
     showView(activeView);
+    initialPullDone = true;
     lastSyncError = '';
     setSyncStatus('ok');
     if (!wasEmpty) toast('↑ Synced from another device');
-  } catch(e) { lastSyncError = `PULL exception: ${e.message}`; setSyncStatus('error'); }
+  } catch(e) {
+    initialPullDone = true; // Don't block pushes forever if pull fails
+    lastSyncError = `PULL exception: ${e.message}`; setSyncStatus('error');
+  }
 }
 
 function startPolling() {
