@@ -150,20 +150,31 @@
   .card .meta { color: #666; font-size: 0.9rem; margin-bottom: 8px; }
 
   /* DATE GROUPS in saved view */
-  .date-group { margin-bottom: 14px; }
-  .date-group-header {
+  /* SAVE GROUPS in saved view */
+  .save-group { margin-bottom: 10px; }
+  .save-group-header {
     display: flex; justify-content: space-between; align-items: center;
-    background: #1c1c1e; color: #fff; border-radius: 10px;
-    padding: 11px 14px; cursor: pointer; font-weight: 700;
-    margin-bottom: 6px; user-select: none; -webkit-user-select: none;
-    font-size: 0.95rem;
+    background: #1c1c1e; color: #fff; border-radius: 12px;
+    padding: 13px 14px; cursor: pointer;
+    user-select: none; -webkit-user-select: none;
   }
-  .date-group-header:active { opacity: 0.75; }
-  .date-group-right { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; opacity: 0.8; }
+  .save-group-header.draft-header { background: #636366; }
+  .save-group-header:active { opacity: 0.8; }
+  .save-group-title { display: flex; flex-direction: column; gap: 3px; }
+  .save-group-time { font-weight: 700; font-size: 1rem; }
+  .save-group-summary { font-size: 0.8rem; opacity: 0.7; }
+  .save-group-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .save-group-btn {
+    font-size: 0.72rem; background: rgba(255,255,255,0.18);
+    border: none; color: #fff; border-radius: 6px; padding: 5px 9px;
+    cursor: pointer; white-space: nowrap; font-weight: 600;
+  }
+  .save-group-btn:active { opacity: 0.7; }
+  .save-group-arrow { font-size: 0.7rem; margin-left: 4px; }
+  .save-group-entries { padding-top: 6px; }
+  /* keep for date-group-entries reuse */
+  .date-group-entries { padding-top: 0; }
   .date-group-arrow { font-size: 0.7rem; }
-  .date-group-csv { font-size: 0.75rem; background: rgba(255,255,255,0.15);
-    border: none; color: #fff; border-radius: 6px; padding: 3px 8px; cursor: pointer; }
-  .date-group-csv:active { opacity: 0.7; }
 
   /* SECTION boxes (morning + evening) */
   .section {
@@ -1716,7 +1727,32 @@ $('btn-export-json').addEventListener('click', () => {
 //============================================================
 // SAVED VIEW
 //============================================================
-let collapsedDates = new Set();
+let expandedSaves = new Set();
+
+function fmtDateTime(isoStr){
+  if (!isoStr) return 'Unknown';
+  const d = new Date(isoStr);
+  return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}) +
+    ' · ' + d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+}
+
+function toggleSaveGroup(key){
+  if (expandedSaves.has(key)) expandedSaves.delete(key);
+  else expandedSaves.add(key);
+  renderSaved();
+}
+
+function downloadBatchCSV(lockedAt){
+  const entries = state.entries.filter(e => e.lockedAt === lockedAt);
+  if (!entries.length) return;
+  download(`food-cart-${entries[0].date}-save.csv`, entriesToCSV(entries), 'text/csv');
+}
+
+function downloadBatchJSON(lockedAt){
+  const entries = state.entries.filter(e => e.lockedAt === lockedAt);
+  if (!entries.length) return;
+  download(`food-cart-${entries[0].date}-save.json`, JSON.stringify(entries, null, 2), 'application/json');
+}
 
 function renderEntryCard(e){
   const cat = CATEGORIES.find(c => c.key === e.category) || {emoji:'🚚'};
@@ -1749,50 +1785,72 @@ function renderEntryCard(e){
   </div>`;
 }
 
-function toggleDateGroup(date){
-  if (collapsedDates.has(date)) collapsedDates.delete(date);
-  else collapsedDates.add(date);
-  renderSaved();
-}
-
 function renderSaved(){
   const list = $('saved-list');
   const filter = $('filter-date').value;
-  const entries = state.entries
-    .filter(e => !filter || e.date === filter)
-    .sort((a,b) => (b.date+'-'+(b.createdAt||'')).localeCompare(a.date+'-'+(a.createdAt||'')));
+  const allEntries = state.entries.filter(e => !filter || e.date === filter);
 
-  if (entries.length === 0){
+  if (allEntries.length === 0){
     list.innerHTML = '<div class="empty">No entries yet.</div>';
     return;
   }
 
-  // Group by date, newest first
-  const byDate = {};
-  for (const e of entries){
-    if (!byDate[e.date]) byDate[e.date] = [];
-    byDate[e.date].push(e);
-  }
-  const dates = Object.keys(byDate).sort((a,b) => b.localeCompare(a));
+  const drafts = allEntries.filter(e => !e.locked);
+  const locked = allEntries.filter(e => e.locked && e.lockedAt);
 
-  list.innerHTML = dates.map(date => {
-    const grp = byDate[date];
-    const collapsed = collapsedDates.has(date);
-    const [y,m,d] = date.split('-');
-    const label = new Date(+y, +m-1, +d).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
-    const count = grp.length;
-    return `<div class="date-group">
-      <div class="date-group-header" onclick="toggleDateGroup('${date}')">
-        <span>📅 ${label}</span>
-        <span class="date-group-right">
-          <span>${count} entr${count===1?'y':'ies'}</span>
-          <button class="date-group-csv" onclick="event.stopPropagation();downloadDayCSV('${date}')">⬇ CSV</button>
-          <span class="date-group-arrow">${collapsed ? '▶' : '▼'}</span>
-        </span>
+  // Group locked entries by their lockedAt timestamp (one group = one lock-and-save press)
+  const byLockedAt = {};
+  for (const e of locked){
+    if (!byLockedAt[e.lockedAt]) byLockedAt[e.lockedAt] = [];
+    byLockedAt[e.lockedAt].push(e);
+  }
+  const saveGroups = Object.entries(byLockedAt).sort(([a],[b]) => b.localeCompare(a));
+
+  let html = '';
+
+  // Drafts section (collapsed by default)
+  if (drafts.length > 0){
+    const exp = expandedSaves.has('__drafts__');
+    html += `<div class="save-group">
+      <div class="save-group-header draft-header" onclick="toggleSaveGroup('__drafts__')">
+        <div class="save-group-title">
+          <span class="save-group-time">✏️ Drafts in progress</span>
+          <span class="save-group-summary">${drafts.length} entr${drafts.length===1?'y':'ies'} — not yet locked</span>
+        </div>
+        <span class="save-group-arrow">${exp?'▼':'▶'}</span>
       </div>
-      ${collapsed ? '' : `<div class="date-group-entries">${grp.map(renderEntryCard).join('')}</div>`}
+      ${exp ? `<div class="save-group-entries">${drafts.map(renderEntryCard).join('')}</div>` : ''}
+    </div>`;
+  }
+
+  // One collapsed card per lock-and-save event
+  html += saveGroups.map(([lockedAt, grp]) => {
+    const exp = expandedSaves.has(lockedAt);
+    const count = grp.length;
+    const timeLabel = fmtDateTime(lockedAt);
+    const catCounts = {};
+    for (const e of grp){
+      const cat = CATEGORIES.find(c => c.key === e.category) || {emoji:'🚚'};
+      catCounts[cat.emoji] = (catCounts[cat.emoji]||0) + 1;
+    }
+    const summary = Object.entries(catCounts).map(([em,n])=>`${n}${em}`).join(' ');
+    return `<div class="save-group">
+      <div class="save-group-header" onclick="toggleSaveGroup('${lockedAt}')">
+        <div class="save-group-title">
+          <span class="save-group-time">🔒 ${escapeHtml(timeLabel)}</span>
+          <span class="save-group-summary">${count} entr${count===1?'y':'ies'} · ${summary}</span>
+        </div>
+        <div class="save-group-actions">
+          <button class="save-group-btn" onclick="event.stopPropagation();downloadBatchCSV('${lockedAt}')">⬇ CSV</button>
+          <button class="save-group-btn" onclick="event.stopPropagation();downloadBatchJSON('${lockedAt}')">⬇ JSON</button>
+          <span class="save-group-arrow">${exp?'▼':'▶'}</span>
+        </div>
+      </div>
+      ${exp ? `<div class="save-group-entries">${grp.map(renderEntryCard).join('')}</div>` : ''}
     </div>`;
   }).join('');
+
+  list.innerHTML = html;
 }
 
 document.addEventListener('change', e => {
