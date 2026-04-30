@@ -563,6 +563,19 @@
   .meals-section { border-left: 3px solid #f59e0b; padding-left: 10px; margin: 4px 0; }
   .meals-header { color: #f59e0b; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
   .dispatched-total { background: #0e1a0e; border-color: #22c55e; margin-top: 4px; }
+  .combo-active-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #1e1e30;
+    border: 1px solid #ff9500;
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ff9500;
+    margin: 4px 0;
+  }
 </style>
 </head>
 <body>
@@ -1164,7 +1177,9 @@ function renderEntryView(){
 
   const draft = getOrCreateDraft();
   const wrap = $('entry-form-content');
-  wrap.innerHTML = renderFormHTML(draft);
+  wrap.innerHTML = (draft.category === 'combo')
+    ? renderComboFormHTML(draft)
+    : renderFormHTML(draft);
   attachFormHandlers(draft);
   recalcAll();
 }
@@ -1338,6 +1353,138 @@ function renderFormHTML(e){
   return html;
 }
 
+function renderComboFormHTML(e) {
+  const catA = CATEGORIES.find(c => c.key === 'hotdog') || { emoji: '🌭' };
+  const catB = CATEGORIES.find(c => c.key === e.comboCategoryB) || { emoji: '🚚' };
+  const itemsA = state.prices['hotdog'] || [];
+  const itemsB = state.prices[e.comboCategoryB] || [];
+  const locOptions  = renderSelectOptions(state.locations, e.location);
+  const workerRows  = e.workers.map((w, i) => renderWorkerRowHTML(w, i)).join('');
+
+  function invRowsHTML(items, fieldPrefix, data) {
+    return items.map(it => `
+      <div class="item-line">
+        <div class="name">${escapeHtml(it.name)}<span class="price">$${it.price.toFixed(2)}</span></div>
+        <input type="number" inputmode="numeric" min="0" step="1"
+          data-combo-field="${fieldPrefix}" data-item="${escapeHtml(it.name)}" data-price="${it.price}"
+          placeholder="0" value="${(data?.[it.name]) ?? ''}">
+        <div class="total" data-combo-total="${fieldPrefix}-${escapeHtml(it.name)}">$0.00</div>
+      </div>`).join('');
+  }
+
+  function comboReloadHTML(num, fieldA, fieldB, dataA, dataB) {
+    const openFlag = num === 1 ? reload1Open : reload2Open;
+    if (!openFlag) {
+      return `<button type="button" class="add-optional-btn" id="add-reload${num}-btn">
+        🔄 Add Reload #${num} (both carts)</button>`;
+    }
+    return `<div class="section reload-section">
+      <h3 class="reload-header">🔄 Reload #${num} — ${catA.emoji} Hotdog</h3>
+      ${invRowsHTML(itemsA, fieldA, dataA)}
+      <h3 class="reload-header" style="margin-top:8px">🔄 Reload #${num} — ${catB.emoji} ${escapeHtml(e.comboCategoryB)}</h3>
+      ${invRowsHTML(itemsB, fieldB, dataB)}
+      <div class="grand-total" style="border-color:#ff9500">
+        <span>Reload #${num} Combined</span>
+        <span class="amount" id="combo-reload${num}-grand">$0.00</span>
+      </div>
+    </div>`;
+  }
+
+  function comboMealsHTML() {
+    if (!mealsOpen) {
+      return `<button type="button" class="add-optional-btn" id="add-meals-btn">
+        🍽️ Employee Meals</button>`;
+    }
+    return `<div class="section meals-section">
+      <h3 class="meals-header">🍽️ Meals — ${catA.emoji} Hotdog</h3>
+      ${invRowsHTML(itemsA, 'mealsA', e.mealsA)}
+      <h3 class="meals-header" style="margin-top:8px">🍽️ Meals — ${catB.emoji} ${escapeHtml(e.comboCategoryB)}</h3>
+      ${invRowsHTML(itemsB, 'mealsB', e.mealsB)}
+      <div class="grand-total" style="border-color:#f59e0b">
+        <span>Meals Total (deducted)</span><span class="amount" id="combo-meals-grand">$0.00</span>
+      </div>
+    </div>`;
+  }
+
+  function comboLeftoverHTML(items, fieldPrefix, data, emoji, label) {
+    return `<div style="font-size:12px;font-weight:700;color:#888;margin:6px 0 2px">${emoji} ${escapeHtml(label)} leftover</div>` +
+      items.map(it => `
+        <div class="item-line">
+          <div class="name">${escapeHtml(it.name)}</div>
+          <input type="number" inputmode="numeric" min="0" step="1"
+            data-combo-field="${fieldPrefix}" data-item="${escapeHtml(it.name)}" data-price="${it.price}"
+            placeholder="0" value="${(data?.[it.name]) ?? ''}">
+          <div class="total" data-combo-total="${fieldPrefix}-${escapeHtml(it.name)}">$0.00</div>
+        </div>`).join('');
+  }
+
+  const deactivateLabel = `${catA.emoji} Hotdog + ${catB.emoji} ${e.comboCartB}`;
+
+  return `
+    <label>Location</label>
+    <select id="f-location" data-field="location">
+      <option value="">— Select location —</option>
+      ${locOptions}
+      <option value="__add_loc__">＋ Add new…</option>
+    </select>
+
+    <label>Workers on this shift</label>
+    <div id="workers-list">${workerRows}</div>
+    <button type="button" class="add-worker-btn" id="add-worker-btn">＋ Add another worker</button>
+
+    <div class="combo-active-bar" id="combo-active-bar">
+      <span>🔀 ${escapeHtml(deactivateLabel)}</span>
+      <button type="button" id="combo-deactivate-btn" style="font-size:11px;background:none;border:none;color:#ff3b30;cursor:pointer">✕ Remove</button>
+    </div>
+
+    <h3 style="color:#e74c3c;margin:8px 0 4px">🌅 Morning — ${catA.emoji} Hotdog</h3>
+    ${invRowsHTML(itemsA, 'morningA', e.morningA)}
+    <div class="grand-total" style="border-color:#e74c3c">
+      <span>Hotdog Morning</span><span class="amount" id="combo-morning-a-grand">$0.00</span>
+    </div>
+
+    <h3 style="color:#9b59b6;margin:8px 0 4px">🌅 Morning — ${catB.emoji} ${escapeHtml(e.comboCartB)}</h3>
+    ${invRowsHTML(itemsB, 'morningB', e.morningB)}
+    <div class="grand-total" style="border-color:#9b59b6">
+      <span>${catB.emoji} Morning</span><span class="amount" id="combo-morning-b-grand">$0.00</span>
+    </div>
+
+    <div class="grand-total dispatched-total">
+      <span>⬆ Combined Morning Total</span><span class="amount" id="dispatched-grand">$0.00</span>
+    </div>
+
+    ${comboReloadHTML(1, 'reload1A', 'reload1B', e.reload1A, e.reload1B)}
+    ${comboReloadHTML(2, 'reload2A', 'reload2B', e.reload2A, e.reload2B)}
+    ${comboMealsHTML()}
+
+    <div class="section evening">
+      <h3>🌆 Evening — Shared Cash</h3>
+      <label>A) Cash received</label>
+      <input type="number" inputmode="decimal" step="0.01" min="0" data-field="cash" placeholder="0.00" value="${e.cash || ''}">
+      <label>B) Debit received</label>
+      <input type="number" inputmode="decimal" step="0.01" min="0" data-field="debit" placeholder="0.00" value="${e.debit || ''}">
+      <label>C) Inventory leftover (recount)</label>
+      ${comboLeftoverHTML(itemsA, 'eveningA', e.eveningA, catA.emoji, 'Hotdog')}
+      ${comboLeftoverHTML(itemsB, 'eveningB', e.eveningB, catB.emoji, e.comboCartB)}
+      <div class="grand-total">
+        <span>Combined Leftover</span><span class="amount" id="leftover-grand">$0.00</span>
+      </div>
+      <div class="recon-box match" id="recon-box">
+        <span class="recon-checkmark" id="recon-checkmark">✅</span>
+        <span id="recon-status">Balanced</span>
+        <span class="formula" id="recon-formula">…</span>
+      </div>
+    </div>
+
+    <div class="tips-box">
+      <label>D) Tips (recorded — not part of reconciliation)</label>
+      <input type="number" inputmode="decimal" step="0.01" min="0" data-field="tips" placeholder="0.00" value="${e.tips || ''}">
+      <div class="split" id="tips-split">Split: —</div>
+    </div>
+    <label>Notes</label>
+    <textarea data-field="notes" placeholder="Anything worth noting...">${escapeHtml(e.notes || '')}</textarea>`;
+}
+
 function timeSelectHTML(selected, field, idx){
   let opts = '<option value="">— time —</option>';
   for (let h = 5; h < 24; h++) {
@@ -1489,6 +1636,30 @@ function attachFormHandlers(draft){
       activateComboMode(draft, target.category, target.name);
     });
   }
+
+  // Combo deactivate button
+  const deactivateBtn = $('combo-deactivate-btn');
+  if (deactivateBtn) {
+    deactivateBtn.addEventListener('click', () => {
+      const draft = state.entries.find(x =>
+        x.date === ($('global-date').value || todayStamp()) &&
+        x.cart === activeCartName() && !x.locked);
+      if (draft) deactivateComboMode(draft);
+    });
+  }
+
+  // Combo inventory inputs (morningA, morningB, eveningA, eveningB, reload1A, etc.)
+  document.querySelectorAll('[data-combo-field]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const field = inp.dataset.comboField;
+      const item  = inp.dataset.item;
+      updateDraft(e => {
+        if (!e[field]) e[field] = {};
+        e[field][item] = num(inp.value);
+      });
+      recalcAll();
+    });
+  });
 }
 
 //============================================================
