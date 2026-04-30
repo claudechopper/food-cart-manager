@@ -379,6 +379,31 @@
   .payroll-shift-row:last-child { border-bottom: none; }
   .payroll-shift-row.paying { opacity: 0.25; }
 
+  /* Wage row */
+  .wage-row {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 14px; background: #f9f9fb; border-bottom: 1px solid #e5e5ea;
+  }
+  .wage-label { font-size: 0.88rem; font-weight: 700; color: #666; white-space: nowrap; }
+  .wage-dollar-wrap { display: flex; align-items: center; gap: 4px; }
+  .wage-dollar-sign { font-weight: 800; color: #333; }
+  .wage-input {
+    width: 72px; padding: 8px 6px; font-size: 0.95rem; font-weight: 700;
+    border: 2px solid #d1d1d6; border-radius: 8px; text-align: right;
+    font-family: inherit; background: #fff; color: #111;
+  }
+  .wage-input:focus { border-color: #007aff; outline: none; }
+  .wage-eye-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 1.1rem; padding: 4px 6px; line-height: 1; border-radius: 6px;
+  }
+  .wage-eye-btn:active { background: #e5e5ea; }
+  .wage-owed-badge {
+    font-weight: 800; color: #1a7a36; font-size: 0.95rem;
+    background: #e8f8ec; padding: 5px 12px; border-radius: 20px;
+    border: 1px solid #34c759;
+  }
+
   .payroll-pay-all-btn {
     background: #34c759; color: #fff; border: none; border-radius: 8px;
     padding: 7px 12px; font-size: 0.85rem; font-weight: 800; cursor: pointer;
@@ -684,7 +709,8 @@ const DEFAULTS = {
   },
   entries: [],
   paidShifts: [],
-  prices: DEFAULT_PRICES
+  prices: DEFAULT_PRICES,
+  wages: {}
 };
 
 function load(){
@@ -700,6 +726,7 @@ function load(){
       }
     }
     if (!Array.isArray(p.paidShifts)) p.paidShifts = [];
+    if (!p.wages || typeof p.wages !== 'object') p.wages = {};
     if (!p.prices || typeof p.prices !== 'object') p.prices = structuredClone(DEFAULT_PRICES);
     // Ensure each known category exists in prices (don't clobber user edits)
     for (const cat of Object.keys(DEFAULT_PRICES)) {
@@ -1244,16 +1271,33 @@ function renderPayroll(){
       const workerTotal = shifts.reduce((s, sh) => s + (sh.hours || 0), 0);
       const sortedShifts = shifts.slice().sort((a, b) => a.date.localeCompare(b.date));
       const workerShiftIds = sortedShifts.map(s => escapeHtml(s.shiftId)).join(',');
+      const wage = (state.wages && state.wages[worker]) || 0;
+      const owedDollars = wage > 0 ? wage * workerTotal : 0;
+      const owedDisplay = owedDollars > 0
+        ? `${fmtHours(workerTotal)} · ${fmt(owedDollars)}`
+        : fmtHours(workerTotal);
       html += `<div class="payroll-worker-block">
         <div class="payroll-worker-header">
           <label class="payroll-select-all-wrap">
             <input type="checkbox" class="payroll-select-all" data-worker="${escapeHtml(worker)}">
             <span class="payroll-worker-name">👤 ${escapeHtml(worker)}</span>
           </label>
-          <div style="display:flex;align-items:center;gap:8px">
-            <span class="payroll-worker-owed">${fmtHours(workerTotal)}</span>
-            <button class="payroll-pay-all-btn" data-pay-worker="${escapeHtml(worker)}">✓ Pay All</button>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+            <span class="payroll-worker-owed">${owedDisplay}</span>
+            <button class="payroll-pay-all-btn" data-pay-worker="${escapeHtml(worker)}">Pay all days and hours for this worker</button>
           </div>
+        </div>
+        <div class="wage-row">
+          <span class="wage-label">💰 Hourly rate:</span>
+          <div class="wage-dollar-wrap">
+            <span class="wage-dollar-sign">$</span>
+            <input type="password" class="wage-input" inputmode="decimal"
+              data-worker="${escapeHtml(worker)}"
+              value="${wage || ''}"
+              placeholder="••••">
+            <button class="wage-eye-btn" title="Show/hide wage">👁</button>
+          </div>
+          ${owedDollars > 0 ? `<span class="wage-owed-badge">= ${fmt(owedDollars)} total owed</span>` : ''}
         </div>`;
       for (const shift of sortedShifts) {
         const cat = CATEGORIES.find(c => c.key === shift.category);
@@ -1372,6 +1416,28 @@ function wirePayrollHandlers(allShifts){
       if (!shift) return;
       if (!confirm(`Mark ${shift.worker}'s shift on ${shift.date} as paid?`)) return;
       payShifts([shiftId], allShifts);
+    });
+  });
+
+  // Wage inputs — eye toggle + save on blur
+  document.querySelectorAll('.wage-input').forEach(inp => {
+    const eyeBtn = inp.nextElementSibling;
+    eyeBtn.addEventListener('click', () => {
+      if (inp.type === 'password') {
+        inp.type = 'number';
+        inp.focus();
+        inp.select();
+      } else {
+        inp.type = 'password';
+      }
+    });
+    inp.addEventListener('blur', () => {
+      const v = parseFloat(inp.value);
+      if (!state.wages) state.wages = {};
+      state.wages[inp.dataset.worker] = (isNaN(v) || v < 0) ? 0 : Math.round(v * 100) / 100;
+      inp.type = 'password';
+      save();
+      renderPayroll();
     });
   });
 
