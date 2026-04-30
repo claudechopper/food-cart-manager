@@ -1058,6 +1058,53 @@ function renderSubTabs(){
 }
 
 //============================================================
+// COMBO MODE
+//============================================================
+function activateComboMode(draft, categoryB, cartNameB) {
+  // Migrate hotdog-side fields to A-suffixed versions
+  draft.morningA  = draft.morning  || {};
+  draft.eveningA  = draft.evening  || {};
+  draft.reload1A  = draft.reload1  || {};
+  draft.reload2A  = draft.reload2  || {};
+  draft.mealsA    = draft.meals    || {};
+  // Initialise B-side fields
+  draft.morningB  = {};
+  draft.eveningB  = {};
+  draft.reload1B  = {};
+  draft.reload2B  = {};
+  draft.mealsB    = {};
+  // Remove old unsuffixed inventory fields
+  delete draft.morning; delete draft.evening;
+  delete draft.reload1; delete draft.reload2; delete draft.meals;
+  // Set combo metadata
+  draft.comboCategoryB = categoryB;
+  draft.comboCartB     = cartNameB;
+  draft.category       = 'combo';
+  // Reset expand state
+  reload1Open = false; reload2Open = false; mealsOpen = false;
+  save();
+  renderEntryView();
+}
+
+function deactivateComboMode(draft) {
+  if (!confirm('Remove combo mode?\n\nThe second cart data will be discarded.')) return;
+  // Restore hotdog-side fields
+  draft.morning  = draft.morningA  || {};
+  draft.evening  = draft.eveningA  || {};
+  draft.reload1  = draft.reload1A  || {};
+  draft.reload2  = draft.reload2A  || {};
+  draft.meals    = draft.mealsA    || {};
+  // Remove all combo fields
+  ['morningA','eveningA','reload1A','reload2A','mealsA',
+   'morningB','eveningB','reload1B','reload2B','mealsB',
+   'comboCategoryB','comboCartB'].forEach(k => delete draft[k]);
+  draft.category = 'hotdog';
+  reload1Open = false; reload2Open = false; mealsOpen = false;
+  save();
+  renderEntryView();
+}
+
+//============================================================
 // DRAFT ENTRIES (per date+cart)
 //============================================================
 function getOrCreateDraft(){
@@ -1138,6 +1185,29 @@ function renderFormHTML(e){
     <div id="workers-list">${workerRows}</div>
     <button type="button" class="add-worker-btn" id="add-worker-btn">＋ Add another worker</button>
   `;
+
+  // ── Combo button (hotdog only, not already in combo mode) ──
+  if (activeCategory === 'hotdog' && e.category !== 'combo') {
+    const noveltyCartNames = state.carts.novelty || [];
+    const bjCartNames      = state.carts.benjerry || [];
+    const comboTargets = [
+      ...noveltyCartNames.map(n => ({ label: `🍦 ${n}`, category: 'novelty', name: n })),
+      ...bjCartNames.map(n      => ({ label: `🍨 ${n}`, category: 'benjerry', name: n })),
+    ];
+    if (comboTargets.length > 0) {
+      const targetOpts = comboTargets.map((t, i) =>
+        `<option value="${i}">+ ${escapeHtml(t.label)}</option>`).join('');
+      html += `
+        <div class="combo-trigger-row" id="combo-trigger-row">
+          <select id="combo-picker" style="flex:1">
+            <option value="">＋ Combine with another cart…</option>
+            ${targetOpts}
+          </select>
+        </div>`;
+      // Store targets on window for the change handler (no global state pollution needed — re-rendered each time)
+      window.__comboTargets = comboTargets;
+    }
+  }
 
   if (HAS_INVENTORY(activeCategory)) {
     const items = state.prices[activeCategory];
@@ -1406,6 +1476,19 @@ function attachFormHandlers(draft){
       recalcAll();
     });
   });
+
+  // Combo picker
+  const comboPicker = $('combo-picker');
+  if (comboPicker) {
+    comboPicker.addEventListener('change', () => {
+      const idx = parseInt(comboPicker.value, 10);
+      if (isNaN(idx)) return;
+      const target = window.__comboTargets?.[idx];
+      if (!target) return;
+      const draft = getOrCreateDraft();
+      activateComboMode(draft, target.category, target.name);
+    });
+  }
 }
 
 //============================================================
