@@ -1665,8 +1665,84 @@ function attachFormHandlers(draft){
 //============================================================
 // LIVE CALCULATIONS
 //============================================================
+function recalcCombo(e) {
+  const itemsA = state.prices['hotdog']          || [];
+  const itemsB = state.prices[e.comboCategoryB]  || [];
+
+  function sumField(items, field, dataAttr) {
+    let total = 0;
+    items.forEach(it => {
+      const inp = document.querySelector(`[data-combo-field="${field}"][data-item="${cssEscape(it.name)}"]`);
+      const cnt = inp ? num(inp.value) : (e[field]?.[it.name] || 0);
+      const val = cnt * it.price;
+      total += val;
+      const cell = document.querySelector(`[data-combo-total="${field}-${cssEscape(it.name)}"]`);
+      if (cell) cell.textContent = fmt(val);
+    });
+    return total;
+  }
+
+  const morningA   = sumField(itemsA, 'morningA',  e.morningA);
+  const morningB   = sumField(itemsB, 'morningB',  e.morningB);
+  const reload1A   = reload1Open ? sumField(itemsA, 'reload1A', e.reload1A) :
+                     itemsA.reduce((s,it)=>s+(e.reload1A?.[it.name]||0)*it.price, 0);
+  const reload1B   = reload1Open ? sumField(itemsB, 'reload1B', e.reload1B) :
+                     itemsB.reduce((s,it)=>s+(e.reload1B?.[it.name]||0)*it.price, 0);
+  const reload2A   = reload2Open ? sumField(itemsA, 'reload2A', e.reload2A) :
+                     itemsA.reduce((s,it)=>s+(e.reload2A?.[it.name]||0)*it.price, 0);
+  const reload2B   = reload2Open ? sumField(itemsB, 'reload2B', e.reload2B) :
+                     itemsB.reduce((s,it)=>s+(e.reload2B?.[it.name]||0)*it.price, 0);
+  const mealsA     = mealsOpen   ? sumField(itemsA, 'mealsA',   e.mealsA)   :
+                     itemsA.reduce((s,it)=>s+(e.mealsA?.[it.name]||0)*it.price, 0);
+  const mealsB     = mealsOpen   ? sumField(itemsB, 'mealsB',   e.mealsB)   :
+                     itemsB.reduce((s,it)=>s+(e.mealsB?.[it.name]||0)*it.price, 0);
+  const eveningA   = sumField(itemsA, 'eveningA', e.eveningA);
+  const eveningB   = sumField(itemsB, 'eveningB', e.eveningB);
+
+  const dispatchedA = morningA + reload1A + reload2A;
+  const dispatchedB = morningB + reload1B + reload2B;
+  const dispatched  = dispatchedA + dispatchedB;
+  const leftover    = eveningA + eveningB;
+  const meals       = mealsA + mealsB;
+  const cash        = num(document.querySelector('[data-field="cash"]')?.value);
+  const debit       = num(document.querySelector('[data-field="debit"]')?.value);
+  const diff        = dispatched - cash - debit - leftover - meals;
+
+  // Update subtotal displays
+  const maG = $('combo-morning-a-grand'); if (maG) maG.textContent = fmt(morningA);
+  const mbG = $('combo-morning-b-grand'); if (mbG) mbG.textContent = fmt(morningB);
+  const dG  = $('dispatched-grand');      if (dG)  dG.textContent  = fmt(dispatched);
+  const r1G = $('combo-reload1-grand');   if (r1G) r1G.textContent = fmt(reload1A + reload1B);
+  const r2G = $('combo-reload2-grand');   if (r2G) r2G.textContent = fmt(reload2A + reload2B);
+  const mG  = $('combo-meals-grand');     if (mG)  mG.textContent  = fmt(meals);
+  const lgG = $('leftover-grand');        if (lgG) lgG.textContent = fmt(leftover);
+
+  const box     = $('recon-box');
+  const status  = $('recon-status');
+  const formula = $('recon-formula');
+  if (box) {
+    const matched = Math.abs(diff) <= 5.005;
+    box.classList.toggle('match',     matched);
+    box.classList.toggle('diff-over', !matched && diff > 0);
+    box.classList.toggle('diff-under',!matched && diff < 0);
+    const ck = $('recon-checkmark');
+    if (ck) ck.style.display = matched ? 'block' : 'none';
+    status.textContent  = matched ? 'Balanced' : `⚠ Discrepancy: ${diff > 0 ? '+' : ''}${fmt(diff)}`;
+    const mealsLabel    = meals > 0 ? ` − Meals ${fmt(meals)}` : '';
+    formula.textContent = `Dispatched ${fmt(dispatched)} − Cash ${fmt(cash)} − Debit ${fmt(debit)} − Leftover ${fmt(leftover)}${mealsLabel} = ${fmt(diff)}`;
+  }
+}
+
 function recalcAll(){
-  if (HAS_INVENTORY(activeCategory)) {
+  // Combo mode reconciliation (separate path)
+  const activeDraft = state.entries.find(x =>
+    x.date === ($('global-date')?.value || todayStamp()) &&
+    x.cart === activeCartName() && !x.locked
+  );
+  if (activeDraft?.category === 'combo') {
+    recalcCombo(activeDraft);
+    // Skip the inventory branch — fall through to tips section below
+  } else if (HAS_INVENTORY(activeCategory)) {
     const items = state.prices[activeCategory];
     const draft = state.entries.find(x =>
       x.date === ($('global-date').value || todayStamp()) &&
