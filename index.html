@@ -170,6 +170,7 @@
     cursor: pointer; white-space: nowrap; font-weight: 600;
   }
   .save-group-btn:active { opacity: 0.7; }
+  .save-group-del { background: rgba(255,59,48,0.55); }
   .save-group-arrow { font-size: 0.7rem; margin-left: 4px; }
   .save-group-entries { padding-top: 6px; }
   /* keep for date-group-entries reuse */
@@ -1754,6 +1755,19 @@ function downloadBatchJSON(lockedAt){
   download(`food-cart-${entries[0].date}-save.json`, JSON.stringify(entries, null, 2), 'application/json');
 }
 
+function deleteSaveGroup(lockedAt){
+  const entries = state.entries.filter(e => e.lockedAt === lockedAt);
+  if (!entries.length) return;
+  const timeLabel = fmtDateTime(lockedAt);
+  const count = entries.length;
+  if (!confirm(`Delete entire save?\n\n🔒 ${timeLabel}\n${count} entr${count===1?'y':'ies'}\n\nThis cannot be undone.`)) return;
+  state.entries = state.entries.filter(e => e.lockedAt !== lockedAt);
+  expandedSaves.delete(lockedAt);
+  save();
+  renderSaved();
+  toast('✓ Save batch deleted');
+}
+
 function renderEntryCard(e){
   const cat = CATEGORIES.find(c => c.key === e.category) || {emoji:'🚚'};
   const workers = (e.workers || []).filter(w => w.worker)
@@ -1843,6 +1857,7 @@ function renderSaved(){
         <div class="save-group-actions">
           <button class="save-group-btn" onclick="event.stopPropagation();downloadBatchCSV('${lockedAt}')">⬇ CSV</button>
           <button class="save-group-btn" onclick="event.stopPropagation();downloadBatchJSON('${lockedAt}')">⬇ JSON</button>
+          <button class="save-group-btn save-group-del" onclick="event.stopPropagation();deleteSaveGroup('${lockedAt}')">🗑</button>
           <span class="save-group-arrow">${exp?'▼':'▶'}</span>
         </div>
       </div>
