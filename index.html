@@ -1895,8 +1895,10 @@ function gatherAllShifts(){
         shiftId: entry.id + '::' + w.worker,
         worker: w.worker,
         date: entry.date,
-        cart: entry.cart,
-        category: entry.category,
+        cart: entry.category === 'combo'
+          ? `${entry.cart} + ${entry.comboCartB}`
+          : entry.cart,
+        category: entry.category === 'combo' ? 'hotdog' : entry.category,
         start: w.start,
         end: w.end,
         hours: calcHours(w.start, w.end),
@@ -2202,33 +2204,68 @@ $('btn-lock-all').addEventListener('click', () => {
 // CSV / JSON EXPORT
 //============================================================
 function entryRow(e){
-  const cat = e.category || '';
-  const items = HAS_INVENTORY(cat) ? state.prices[cat] : [];
-  const morningTotal = items.reduce((s, it) => s + (e.morning?.[it.name] || 0) * it.price, 0);
-  const leftoverTotal = items.reduce((s, it) => s + (e.evening?.[it.name] || 0) * it.price, 0);
-  const recon = morningTotal - num(e.cash) - num(e.debit) - leftoverTotal;
-  const workers = (e.workers || []).filter(w => w.worker).map(w => `${w.worker} (${w.start || '?'}–${w.end || '?'})`).join('; ');
+  const cat     = e.category || '';
+  const isCombo = cat === 'combo';
+  const workers = (e.workers || []).filter(w => w.worker)
+    .map(w => `${w.worker} (${w.start || '?'}–${w.end || '?'})`).join('; ');
+
+  let morningTotal = 0, leftoverTotal = 0, mealsTotal = 0, recon = 0;
+  let itemAEntries = {}, itemBEntries = {};
+  if (isCombo) {
+    const itemsA = state.prices['hotdog'] || [];
+    const itemsB = state.prices[e.comboCategoryB] || [];
+    morningTotal = ['morningA','reload1A','reload2A'].reduce((s,f)=>
+      s+itemsA.reduce((ss,it)=>ss+(e[f]?.[it.name]||0)*it.price,0),0)
+      + ['morningB','reload1B','reload2B'].reduce((s,f)=>
+      s+itemsB.reduce((ss,it)=>ss+(e[f]?.[it.name]||0)*it.price,0),0);
+    leftoverTotal = itemsA.reduce((s,it)=>s+(e.eveningA?.[it.name]||0)*it.price,0)
+                  + itemsB.reduce((s,it)=>s+(e.eveningB?.[it.name]||0)*it.price,0);
+    mealsTotal    = itemsA.reduce((s,it)=>s+(e.mealsA?.[it.name]||0)*it.price,0)
+                  + itemsB.reduce((s,it)=>s+(e.mealsB?.[it.name]||0)*it.price,0);
+    recon = morningTotal - num(e.cash) - num(e.debit) - leftoverTotal - mealsTotal;
+    itemsA.forEach(it => {
+      itemAEntries[`AM ${it.name} (hotdog)`] = e.morningA?.[it.name] ?? '';
+      itemAEntries[`PM ${it.name} (hotdog)`] = e.eveningA?.[it.name] ?? '';
+    });
+    itemsB.forEach(it => {
+      itemBEntries[`AM ${it.name} (${e.comboCategoryB})`] = e.morningB?.[it.name] ?? '';
+      itemBEntries[`PM ${it.name} (${e.comboCategoryB})`] = e.eveningB?.[it.name] ?? '';
+    });
+  } else {
+    const items = HAS_INVENTORY(cat) ? state.prices[cat] : [];
+    const reload1Total = items.reduce((s,it)=>s+(e.reload1?.[it.name]||0)*it.price,0);
+    const reload2Total = items.reduce((s,it)=>s+(e.reload2?.[it.name]||0)*it.price,0);
+    morningTotal  = items.reduce((s,it)=>s+(e.morning?.[it.name]||0)*it.price,0)+reload1Total+reload2Total;
+    leftoverTotal = items.reduce((s,it)=>s+(e.evening?.[it.name]||0)*it.price,0);
+    mealsTotal    = items.reduce((s,it)=>s+(e.meals?.[it.name]||0)*it.price,0);
+    recon = morningTotal - num(e.cash) - num(e.debit) - leftoverTotal - mealsTotal;
+    items.forEach(it => {
+      itemAEntries[`AM ${it.name}`] = e.morning?.[it.name] ?? '';
+      itemAEntries[`PM ${it.name}`] = e.evening?.[it.name] ?? '';
+    });
+  }
   return {
     Date: e.date,
-    Category: cat,
-    Cart: e.cart,
+    Category: isCombo ? `combo (hotdog + ${e.comboCategoryB})` : cat,
+    Cart: isCombo ? `${e.cart} + ${e.comboCartB}` : e.cart,
     Location: e.location,
     Workers: workers,
     'Worker count': (e.workers || []).filter(w => w.worker).length,
-    Cash: num(e.cash).toFixed(2),
-    Debit: num(e.debit).toFixed(2),
-    Tips: num(e.tips).toFixed(2),
+    Cash:           num(e.cash).toFixed(2),
+    Debit:          num(e.debit).toFixed(2),
+    Tips:           num(e.tips).toFixed(2),
     'Tips per worker': (() => {
       const n = (e.workers || []).filter(w => w.worker).length;
       return n ? (num(e.tips) / n).toFixed(2) : '';
     })(),
-    'Morning $ out': HAS_INVENTORY(cat) ? morningTotal.toFixed(2) : '',
-    'Leftover $':    HAS_INVENTORY(cat) ? leftoverTotal.toFixed(2) : '',
-    Reconciliation:  HAS_INVENTORY(cat) ? recon.toFixed(2) : '',
+    'Total Dispatched $': HAS_INVENTORY(cat) || isCombo ? morningTotal.toFixed(2) : '',
+    'Leftover $':         HAS_INVENTORY(cat) || isCombo ? leftoverTotal.toFixed(2) : '',
+    'Meals $':            mealsTotal > 0 ? mealsTotal.toFixed(2) : '',
+    Reconciliation:       HAS_INVENTORY(cat) || isCombo ? recon.toFixed(2) : '',
     Locked: e.locked ? 'Y' : 'N',
     Notes: e.notes || '',
-    ...Object.fromEntries(items.map(it => [`AM ${it.name}`, e.morning?.[it.name] ?? ''])),
-    ...Object.fromEntries(items.map(it => [`PM ${it.name}`, e.evening?.[it.name] ?? ''])),
+    ...itemAEntries,
+    ...itemBEntries,
   };
 }
 
@@ -2312,15 +2349,40 @@ function deleteSaveGroup(lockedAt){
 }
 
 function renderEntryCard(e){
-  const cat = CATEGORIES.find(c => c.key === e.category) || {emoji:'🚚'};
+  const isCombo = e.category === 'combo';
+  const cat = isCombo
+    ? { emoji: '🔀' }
+    : (CATEGORIES.find(c => c.key === e.category) || { emoji: '🚚' });
+  const displayCart = isCombo
+    ? `${escapeHtml(e.cart)} + ${escapeHtml(e.comboCartB || '')}`
+    : escapeHtml(e.cart);
   const workers = (e.workers || []).filter(w => w.worker)
     .map(w => `${escapeHtml(w.worker)} (${fmt12(w.start) || '?'}–${fmt12(w.end) || '?'})`).join(', ');
-  const items = HAS_INVENTORY(e.category) ? state.prices[e.category] : [];
-  const morningTotal = items.reduce((s, it) => s + (e.morning?.[it.name] || 0) * it.price, 0);
-  const leftoverTotal = items.reduce((s, it) => s + (e.evening?.[it.name] || 0) * it.price, 0);
-  const recon = morningTotal - num(e.cash) - num(e.debit) - leftoverTotal;
+
+  let morningTotal = 0, leftoverTotal = 0, recon = 0;
+  if (isCombo) {
+    const itemsA = state.prices['hotdog'] || [];
+    const itemsB = state.prices[e.comboCategoryB] || [];
+    const dispA = ['morningA','reload1A','reload2A'].reduce((s,f)=>s+itemsA.reduce((ss,it)=>ss+(e[f]?.[it.name]||0)*it.price,0),0);
+    const dispB = ['morningB','reload1B','reload2B'].reduce((s,f)=>s+itemsB.reduce((ss,it)=>ss+(e[f]?.[it.name]||0)*it.price,0),0);
+    morningTotal = dispA + dispB;
+    leftoverTotal = itemsA.reduce((s,it)=>s+(e.eveningA?.[it.name]||0)*it.price,0)
+                  + itemsB.reduce((s,it)=>s+(e.eveningB?.[it.name]||0)*it.price,0);
+    const mealsTotal = itemsA.reduce((s,it)=>s+(e.mealsA?.[it.name]||0)*it.price,0)
+                     + itemsB.reduce((s,it)=>s+(e.mealsB?.[it.name]||0)*it.price,0);
+    recon = morningTotal - num(e.cash) - num(e.debit) - leftoverTotal - mealsTotal;
+  } else {
+    const items = HAS_INVENTORY(e.category) ? state.prices[e.category] : [];
+    const reload1Total = items.reduce((s,it)=>s+(e.reload1?.[it.name]||0)*it.price,0);
+    const reload2Total = items.reduce((s,it)=>s+(e.reload2?.[it.name]||0)*it.price,0);
+    const mealsTotal   = items.reduce((s,it)=>s+(e.meals?.[it.name]||0)*it.price,0);
+    morningTotal  = items.reduce((s,it)=>s+(e.morning?.[it.name]||0)*it.price,0)
+                  + reload1Total + reload2Total;
+    leftoverTotal = items.reduce((s,it)=>s+(e.evening?.[it.name]||0)*it.price,0);
+    recon = morningTotal - num(e.cash) - num(e.debit) - leftoverTotal - mealsTotal;
+  }
   let inv = '';
-  if (HAS_INVENTORY(e.category)) {
+  if (isCombo || HAS_INVENTORY(e.category)) {
     inv = `
       <div class="meta">🌅 Out: ${fmt(morningTotal)} · 🌆 Left: ${fmt(leftoverTotal)} · 💵 Cash ${fmt(e.cash)} + Debit ${fmt(e.debit)}</div>
       <div class="meta" style="color:${Math.abs(recon)<=5.005?'#1a7a36':recon>0?'#7a5200':'#b00020'}">
@@ -2330,7 +2392,7 @@ function renderEntryCard(e){
     inv = `<div class="meta">💵 Cash ${fmt(e.cash)} + Debit ${fmt(e.debit)}</div>`;
   }
   return `<div class="card">
-    <h3>${cat.emoji} ${escapeHtml(e.cart)} ${e.locked ? '<span class="pill">LOCKED</span>' : '<span class="pill" style="background:#ff9500">DRAFT</span>'}</h3>
+    <h3>${cat.emoji} ${displayCart} ${isCombo ? '<span class="pill" style="background:#ff9500">COMBO</span>' : ''} ${e.locked ? '<span class="pill">LOCKED</span>' : '<span class="pill" style="background:#ff9500">DRAFT</span>'}</h3>
     <div class="meta">📍 ${escapeHtml(e.location || '—')}</div>
     <div class="meta">👤 ${workers || '—'}</div>
     ${inv}
@@ -2387,8 +2449,12 @@ function renderSaved(){
     const timeLabel = fmtDateTime(lockedAt);
     const catCounts = {};
     for (const e of grp){
-      const cat = CATEGORIES.find(c => c.key === e.category) || {emoji:'🚚'};
-      catCounts[cat.emoji] = (catCounts[cat.emoji]||0) + 1;
+      if (e.category === 'combo') {
+        catCounts['🔀'] = (catCounts['🔀']||0) + 1;
+      } else {
+        const cat = CATEGORIES.find(c => c.key === e.category) || {emoji:'🚚'};
+        catCounts[cat.emoji] = (catCounts[cat.emoji]||0) + 1;
+      }
     }
     const summary = Object.entries(catCounts).map(([em,n])=>`${n}${em}`).join(' ');
     return `<div class="save-group">
