@@ -1588,15 +1588,36 @@ function renderPricesDisplay(){
 
 function updatePrice(cat, idx, value){
   const v = parseFloat(value);
+  if (!state.prices[cat] || !state.prices[cat][idx]) return;
+  const item = state.prices[cat][idx];
+  const oldPrice = item.price;
   if (isNaN(v) || v < 0) {
     alert('Please enter a valid price (0 or higher).');
     renderPricesDisplay();
     return;
   }
-  if (!state.prices[cat] || !state.prices[cat][idx]) return;
-  state.prices[cat][idx].price = Math.round(v * 100) / 100;
+  const newPrice = Math.round(v * 100) / 100;
+  if (newPrice === oldPrice) return;
+
+  // Count how many saved entries reference this item — to show the user the blast radius
+  const affected = state.entries.filter(e =>
+    e.category === cat &&
+    ((e.morning && e.morning[item.name]) || (e.evening && e.evening[item.name]))
+  ).length;
+
+  const msg =
+    `Change "${item.name}" price from ${fmt(oldPrice)} to ${fmt(newPrice)}?\n\n` +
+    (affected > 0
+      ? `⚠ This will recalculate totals on ${affected} saved ${affected === 1 ? 'entry' : 'entries'} that include this item. Reconciliation results may change.\n\nExport CSV first if you need a snapshot of the old numbers.\n\nProceed?`
+      : `No saved entries use this item yet, so only future entries will be affected.`);
+
+  if (!confirm(msg)) {
+    renderPricesDisplay(); // revert input field to old value
+    return;
+  }
+  item.price = newPrice;
   save();
-  toast('Price updated · ' + fmt(state.prices[cat][idx].price));
+  toast('Price updated · ' + fmt(newPrice));
   if (activeView === 'entry') renderEntryView();
 }
 
