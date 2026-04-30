@@ -32,15 +32,15 @@
 
   /* PRIMARY TABS */
   .primary-tabs {
-    display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px;
     background: #e5e5ea; padding: 4px; border-radius: 12px; margin-bottom: 10px;
   }
   .primary-tab {
-    padding: 10px 4px; text-align: center; border-radius: 8px;
-    font-weight: 600; font-size: 0.78rem; cursor: pointer; color: #333;
+    padding: 8px 2px; text-align: center; border-radius: 8px;
+    font-weight: 600; font-size: 0.72rem; cursor: pointer; color: #333;
     border: none; background: transparent; line-height: 1.2;
   }
-  .primary-tab .emoji { display: block; font-size: 1.4rem; margin-bottom: 2px; }
+  .primary-tab .emoji { display: block; font-size: 1.2rem; margin-bottom: 2px; }
   .primary-tab.active { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
 
   /* SUB TABS */
@@ -233,6 +233,17 @@
     margin-bottom: 8px;
   }
   .worker-row select, .worker-row input { padding: 10px; font-size: 0.95rem; }
+
+  /* clock icon on time inputs */
+  .time-wrap {
+    position: relative; display: flex; align-items: center;
+  }
+  .time-icon {
+    position: absolute; left: 7px; font-size: 0.9rem;
+    pointer-events: none; z-index: 1; line-height: 1;
+  }
+  .worker-row .time-wrap input[type="time"] { padding-left: 28px; width: 100%; }
+
   .worker-row .x {
     background: none; border: 2px solid #ff3b30; color: #ff3b30;
     border-radius: 8px; padding: 8px 10px; font-size: 1rem; cursor: pointer;
@@ -324,6 +335,95 @@
   .dp-day.dp-selected { background: #007aff; color: #fff; border-color: #007aff; font-weight: 800; }
   .dp-actions { display: flex; gap: 10px; padding: 0 4px; }
   .dp-actions .btn { margin-top: 0; }
+
+  /* ── PAYROLL TAB ───────────────────────────────────────────── */
+  .payroll-owed-banner {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #007aff; color: #fff; border-radius: 14px;
+    padding: 16px 18px; margin-bottom: 14px;
+  }
+  .payroll-owed-label { font-weight: 700; font-size: 1rem; opacity: 0.9; }
+  .payroll-owed-hours { font-size: 1.8rem; font-weight: 800; }
+
+  .payroll-pay-selected-btn {
+    width: 100%; padding: 15px; font-size: 1.05rem; font-weight: 800;
+    border: none; border-radius: 12px; cursor: pointer;
+    background: #34c759; color: #fff; margin-bottom: 14px;
+    display: none;
+  }
+  .payroll-pay-selected-btn:active { opacity: 0.8; }
+
+  .payroll-worker-block {
+    background: #fff; border-radius: 12px; margin-bottom: 12px;
+    border: 1px solid #e5e5ea; overflow: hidden;
+  }
+  .payroll-worker-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px; background: #f5f5f7; border-bottom: 1px solid #e5e5ea;
+    gap: 10px;
+  }
+  .payroll-select-all-wrap {
+    display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1;
+  }
+  .payroll-select-all {
+    width: 22px; height: 22px; cursor: pointer;
+    accent-color: #34c759; flex-shrink: 0;
+  }
+  .payroll-worker-name { font-weight: 800; font-size: 1rem; }
+  .payroll-worker-owed { font-weight: 800; color: #007aff; font-size: 1rem; white-space: nowrap; }
+
+  .payroll-shift-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; border-bottom: 1px solid #f0f0f0;
+    transition: opacity 0.45s;
+  }
+  .payroll-shift-row:last-child { border-bottom: none; }
+  .payroll-shift-row.paying { opacity: 0.25; }
+
+  .payroll-check {
+    width: 22px; height: 22px; cursor: pointer; flex-shrink: 0;
+    accent-color: #34c759;
+  }
+  .payroll-shift-info { flex: 1; min-width: 0; }
+  .payroll-shift-date { display: block; font-size: 0.9rem; font-weight: 700; color: #333; }
+  .payroll-shift-cart { display: block; font-size: 0.82rem; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .payroll-shift-hrs { font-weight: 800; font-size: 1rem; white-space: nowrap; color: #111; }
+
+  /* Archive */
+  .payroll-archive-wrap {
+    margin-top: 6px;
+  }
+  .payroll-archive-summary {
+    font-weight: 700; font-size: 1rem; cursor: pointer; padding: 4px 0;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .payroll-archive-worker {
+    background: #fff; border-radius: 12px; margin-bottom: 8px;
+    border: 1px solid #e5e5ea; overflow: hidden;
+  }
+  .payroll-archive-worker > summary {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px; background: #f5f5f7;
+    font-weight: 800; font-size: 0.95rem;
+    list-style: none; gap: 8px;
+  }
+  .payroll-archive-worker > summary::-webkit-details-marker { display: none; }
+  .payroll-archive-worker > summary::before { content: '▶'; font-size: 0.7rem; color: #999; transition: transform 0.2s; }
+  .payroll-archive-worker[open] > summary::before { transform: rotate(90deg); }
+  .payroll-archive-name { flex: 1; }
+  .payroll-archive-total { color: #34c759; font-weight: 800; }
+
+  .payroll-paid-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-bottom: 1px solid #f5f5f5;
+    opacity: 0.65;
+  }
+  .payroll-paid-row:last-child { border-bottom: none; }
+  .payroll-paid-check { color: #34c759; font-weight: 800; font-size: 1rem; flex-shrink: 0; width: 22px; text-align: center; }
+  .payroll-paid-info { flex: 1; }
+  .payroll-paid-date { display: block; font-size: 0.88rem; font-weight: 600; text-decoration: line-through; color: #999; }
+  .payroll-paid-cart { display: block; font-size: 0.8rem; text-decoration: line-through; color: #bbb; }
+  .payroll-paid-hrs { font-weight: 700; font-size: 0.95rem; text-decoration: line-through; color: #aaa; white-space: nowrap; }
 
   /* ── GUIDED TOUR ─────────────────────────────────────────── */
   .tour-overlay {
@@ -432,6 +532,23 @@
     <div id="entry-form-content"></div>
   </div>
 
+  <!-- PAYROLL VIEW -->
+  <div id="view-payroll" style="display:none">
+    <h2 style="margin:8px 0 12px">💰 Payroll</h2>
+    <div id="payroll-owed-banner" class="payroll-owed-banner" style="display:none">
+      <span class="payroll-owed-label">Total Hours Owed</span>
+      <span class="payroll-owed-hours" id="payroll-owed-hours">0h</span>
+    </div>
+    <button class="payroll-pay-selected-btn" id="btn-pay-selected">✓ Pay Selected</button>
+    <div id="payroll-unpaid"></div>
+    <details class="payroll-archive-wrap" id="payroll-archive-details" style="background:transparent;border:none;padding:0">
+      <summary style="font-weight:800;font-size:1rem;padding:10px 4px;list-style:none;cursor:pointer">
+        📁 Paid Archive <span id="payroll-archive-count" style="color:#888;font-weight:500;font-size:0.88rem"></span>
+      </summary>
+      <div id="payroll-archive"></div>
+    </details>
+  </div>
+
   <!-- SAVED VIEW -->
   <div id="view-saved" style="display:none">
     <h2 style="margin:8px 0 12px">📋 Saved Entries</h2>
@@ -524,7 +641,6 @@ function colorFor(catKey, idx){
   return SOLO_COLOR[catKey] || '#007aff';
 }
 
-// Hardcoded inventory items + prices (per category)
 const PRICES = {
   novelty: [
     { name: 'Magnums',      price: 7 },
@@ -554,7 +670,8 @@ const DEFAULTS = {
     benjerry:  ['Ben & Jerry Truck'],
     softserve: ['Soft Serve Truck'],
   },
-  entries: []
+  entries: [],
+  paidShifts: []
 };
 
 function load(){
@@ -569,18 +686,32 @@ function load(){
         p.carts[c.key] = structuredClone(DEFAULTS.carts[c.key]);
       }
     }
+    if (!Array.isArray(p.paidShifts)) p.paidShifts = [];
     return p;
   } catch(e){ return structuredClone(DEFAULTS); }
 }
 function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
 
 let state = load();
+
+// One-time seed of default workers
+const SEED_WORKERS_KEY = 'fcm_seeded_workers_v1';
+const DEFAULT_WORKERS = ['Art','Chris','Eli','Sam','Wagone','Christina','Nada','J Harrison','Stepan','Corey'];
+if (!localStorage.getItem(SEED_WORKERS_KEY)) {
+  for (const w of DEFAULT_WORKERS) {
+    if (!state.workers.includes(w)) state.workers.push(w);
+  }
+  localStorage.setItem(SEED_WORKERS_KEY, '1');
+  localStorage.setItem(KEY, JSON.stringify(state));
+}
+
 let activeView = 'entry';
 let activeCategory = 'novelty';
 let activeCartIdx = 0;
 
 const $ = id => document.getElementById(id);
 function escapeHtml(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeCSS(s){ return String(s).replace(/([!"#$%&'()*+,./:;<=>?@[\]^`{|}~\\])/g,'\\$1'); }
 function toast(msg){
   const t = $('toast');
   t.textContent = msg; t.classList.add('show');
@@ -593,20 +724,42 @@ function fmt(n){ return '$' + (Math.round((n||0) * 100) / 100).toFixed(2); }
 function num(v){ const n = parseFloat(v); return isNaN(n) ? 0 : n; }
 
 //============================================================
+// PAYROLL HELPERS
+//============================================================
+function calcHours(start, end){
+  if (!start || !end) return null;
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  let mins = (eh * 60 + em) - (sh * 60 + sm);
+  if (mins < 0) mins += 24 * 60;
+  if (mins === 0) return null;
+  return mins / 60;
+}
+
+function fmtHours(h){
+  if (h === null || h === undefined || isNaN(h)) return '—';
+  const hrs = Math.floor(h);
+  const mins = Math.round((h - hrs) * 60);
+  return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
+}
+
+//============================================================
 // VIEW SWITCHING
 //============================================================
 function showView(v){
   activeView = v;
   $('view-entry').style.display    = v === 'entry'    ? '' : 'none';
+  $('view-payroll').style.display  = v === 'payroll'  ? '' : 'none';
   $('view-saved').style.display    = v === 'saved'    ? '' : 'none';
   $('view-settings').style.display = v === 'settings' ? '' : 'none';
-  $('primary-tabs').style.display  = v === 'entry'    ? '' : 'none';
+  $('primary-tabs').style.display  = (v === 'entry' || v === 'payroll') ? '' : 'none';
   $('sub-tabs').style.display      = (v === 'entry' && state.carts[activeCategory].length > 1) ? '' : 'none';
   $('icon-saved').classList.toggle('active', v === 'saved');
   $('icon-settings').classList.toggle('active', v === 'settings');
-  if (v === 'saved') renderSaved();
+  if (v === 'saved')    renderSaved();
   if (v === 'settings') renderSettings();
-  if (v === 'entry') renderEntryView();
+  if (v === 'entry')    renderEntryView();
+  if (v === 'payroll')  renderPayroll();
 }
 $('icon-saved').addEventListener('click', () => showView(activeView === 'saved' ? 'entry' : 'saved'));
 $('icon-settings').addEventListener('click', () => showView(activeView === 'settings' ? 'entry' : 'settings'));
@@ -620,7 +773,7 @@ function renderPrimaryTabs(){
   wrap.innerHTML = '';
   CATEGORIES.forEach(c => {
     const btn = document.createElement('button');
-    btn.className = 'primary-tab' + (c.key === activeCategory ? ' active' : '');
+    btn.className = 'primary-tab' + (c.key === activeCategory && activeView === 'entry' ? ' active' : '');
     btn.innerHTML = `<span class="emoji">${c.emoji}</span>${c.label}`;
     btn.onclick = () => {
       activeCategory = c.key;
@@ -632,7 +785,17 @@ function renderPrimaryTabs(){
     };
     wrap.appendChild(btn);
   });
+  // Payroll tab
+  const pbtn = document.createElement('button');
+  pbtn.className = 'primary-tab' + (activeView === 'payroll' ? ' active' : '');
+  pbtn.innerHTML = `<span class="emoji">💰</span>Payroll`;
+  pbtn.onclick = () => {
+    showView('payroll');
+    renderPrimaryTabs();
+  };
+  wrap.appendChild(pbtn);
 }
+
 function renderSubTabs(){
   const wrap = $('sub-tabs');
   wrap.innerHTML = '';
@@ -666,8 +829,8 @@ function getOrCreateDraft(){
       date, cart, category: activeCategory,
       location: '',
       workers: [{ worker: '', start: '', end: '' }],
-      morning: {},  // itemName -> count
-      evening: {},  // itemName -> count (leftover)
+      morning: {},
+      evening: {},
       cash: 0, debit: 0, tips: 0,
       notes: '',
       locked: false,
@@ -686,7 +849,7 @@ function updateDraft(updater){
 }
 
 //============================================================
-// ENTRY VIEW (dynamic per category)
+// ENTRY VIEW
 //============================================================
 function renderEntryView(){
   const cartName = activeCartName() || '(no cart)';
@@ -769,7 +932,6 @@ function renderFormHTML(e){
       </div>
     `;
   } else {
-    // truck: just cash + debit recording
     html += `
       <div class="section trucks">
         <h3>💵 Money received (record only)</h3>
@@ -781,7 +943,6 @@ function renderFormHTML(e){
     `;
   }
 
-  // tips section (all categories)
   html += `
     <div class="tips-box">
       <label>D) Tips (recorded — not part of reconciliation)</label>
@@ -805,8 +966,8 @@ function renderWorkerRowHTML(w, i){
         ${opts}
         <option value="__add_worker__">＋ Add new…</option>
       </select>
-      <input type="time" step="900" data-worker-field="start" data-idx="${i}" value="${w.start || ''}" placeholder="Start">
-      <input type="time" step="900" data-worker-field="end" data-idx="${i}" value="${w.end || ''}" placeholder="End">
+      <label class="time-wrap"><span class="time-icon">🕐</span><input type="time" step="300" data-worker-field="start" data-idx="${i}" value="${w.start || ''}" placeholder="Start"></label>
+      <label class="time-wrap"><span class="time-icon">🕐</span><input type="time" step="300" data-worker-field="end" data-idx="${i}" value="${w.end || ''}" placeholder="End"></label>
       <button class="x" data-remove-worker="${i}" title="Remove">✕</button>
     </div>
   `;
@@ -817,7 +978,6 @@ function renderSelectOptions(list, selected){
 }
 
 function attachFormHandlers(draft){
-  // Location
   const loc = $('f-location');
   loc.addEventListener('change', () => {
     if (loc.value === '__add_loc__') {
@@ -832,7 +992,6 @@ function attachFormHandlers(draft){
     refreshGlow();
   });
 
-  // Workers (delegated)
   $('workers-list').addEventListener('change', (ev) => {
     const t = ev.target;
     if (t.dataset.workerField) {
@@ -874,7 +1033,6 @@ function attachFormHandlers(draft){
     renderEntryView();
   });
 
-  // Item count inputs (morning/evening)
   document.querySelectorAll('[data-morning], [data-evening], [data-field]').forEach(inp => {
     inp.addEventListener('input', () => {
       if (inp.dataset.morning !== undefined) {
@@ -940,7 +1098,6 @@ function recalcAll(){
     }
   }
 
-  // tips split
   const tipsInp = document.querySelector('[data-field="tips"]');
   const tips = tipsInp ? num(tipsInp.value) : 0;
   const draft = state.entries.find(x =>
@@ -978,6 +1135,220 @@ function refreshGlow(){
 }
 
 //============================================================
+// PAYROLL VIEW
+//============================================================
+function gatherAllShifts(){
+  const shifts = [];
+  for (const entry of state.entries) {
+    for (const w of (entry.workers || [])) {
+      if (!w.worker || !w.worker.trim()) continue;
+      shifts.push({
+        shiftId: entry.id + '::' + w.worker,
+        worker: w.worker,
+        date: entry.date,
+        cart: entry.cart,
+        category: entry.category,
+        start: w.start,
+        end: w.end,
+        hours: calcHours(w.start, w.end),
+        locked: entry.locked
+      });
+    }
+  }
+  return shifts;
+}
+
+function renderPayroll(){
+  const allShifts = gatherAllShifts();
+  const paidIds = new Set((state.paidShifts || []).map(p => p.shiftId));
+  const unpaid = allShifts.filter(s => !paidIds.has(s.shiftId));
+
+  // Total owed banner
+  const totalOwed = unpaid.reduce((sum, s) => sum + (s.hours || 0), 0);
+  const banner = $('payroll-owed-banner');
+  if (totalOwed > 0) {
+    banner.style.display = '';
+    $('payroll-owed-hours').textContent = fmtHours(totalOwed);
+  } else {
+    banner.style.display = 'none';
+  }
+
+  // Group unpaid by worker
+  const byWorker = {};
+  for (const s of unpaid) {
+    if (!byWorker[s.worker]) byWorker[s.worker] = [];
+    byWorker[s.worker].push(s);
+  }
+
+  const unpaidEl = $('payroll-unpaid');
+  if (Object.keys(byWorker).length === 0) {
+    unpaidEl.innerHTML = '<div class="empty">No unpaid hours. Add workers to shift entries first.</div>';
+  } else {
+    let html = '';
+    for (const [worker, shifts] of Object.entries(byWorker)) {
+      const workerTotal = shifts.reduce((s, sh) => s + (sh.hours || 0), 0);
+      const sortedShifts = shifts.slice().sort((a, b) => a.date.localeCompare(b.date));
+      html += `<div class="payroll-worker-block">
+        <div class="payroll-worker-header">
+          <label class="payroll-select-all-wrap">
+            <input type="checkbox" class="payroll-select-all" data-worker="${escapeHtml(worker)}">
+            <span class="payroll-worker-name">👤 ${escapeHtml(worker)}</span>
+          </label>
+          <span class="payroll-worker-owed" id="worker-owed-${escapeHtml(worker)}">${fmtHours(workerTotal)} owed</span>
+        </div>`;
+      for (const shift of sortedShifts) {
+        const cat = CATEGORIES.find(c => c.key === shift.category);
+        html += `<div class="payroll-shift-row" data-shift-id="${escapeHtml(shift.shiftId)}">
+          <input type="checkbox" class="payroll-check"
+            data-shift-id="${escapeHtml(shift.shiftId)}"
+            data-worker="${escapeHtml(shift.worker)}"
+            data-hours="${shift.hours !== null ? shift.hours : 0}">
+          <div class="payroll-shift-info">
+            <span class="payroll-shift-date">${shift.date}</span>
+            <span class="payroll-shift-cart">${cat ? cat.emoji : ''} ${escapeHtml(shift.cart)}</span>
+          </div>
+          <span class="payroll-shift-hrs">${fmtHours(shift.hours)}</span>
+        </div>`;
+      }
+      html += '</div>';
+    }
+    unpaidEl.innerHTML = html;
+  }
+
+  // Reset pay-selected button
+  const payBtn = $('btn-pay-selected');
+  payBtn.style.display = 'none';
+  payBtn.onclick = null;
+
+  // Archive
+  const paid = (state.paidShifts || []).map(p => {
+    const orig = allShifts.find(s => s.shiftId === p.shiftId);
+    return orig ? { ...p, ...orig } : p;
+  });
+
+  const archiveCountEl = $('payroll-archive-count');
+  archiveCountEl.textContent = paid.length > 0 ? `(${paid.length} shift${paid.length !== 1 ? 's' : ''})` : '';
+
+  const paidByWorker = {};
+  for (const p of paid) {
+    if (!paidByWorker[p.worker]) paidByWorker[p.worker] = [];
+    paidByWorker[p.worker].push(p);
+  }
+
+  const archiveEl = $('payroll-archive');
+  if (paid.length === 0) {
+    archiveEl.innerHTML = '<div class="empty" style="padding:14px 4px">No paid shifts yet.</div>';
+  } else {
+    let aHtml = '';
+    for (const [worker, shifts] of Object.entries(paidByWorker)) {
+      const paidTotal = shifts.reduce((s, sh) => s + (sh.hours || 0), 0);
+      aHtml += `<details class="payroll-archive-worker">
+        <summary>
+          <span class="payroll-archive-name">👤 ${escapeHtml(worker)}</span>
+          <span class="payroll-archive-total">${fmtHours(paidTotal)} paid</span>
+        </summary>`;
+      const sorted = shifts.slice().sort((a, b) => (b.paidAt || '').localeCompare(a.paidAt || ''));
+      for (const shift of sorted) {
+        const cat = CATEGORIES.find(c => c.key === shift.category);
+        aHtml += `<div class="payroll-paid-row">
+          <span class="payroll-paid-check">✓</span>
+          <div class="payroll-paid-info">
+            <span class="payroll-paid-date">${shift.date}</span>
+            <span class="payroll-paid-cart">${cat ? cat.emoji : ''} ${escapeHtml(shift.cart)}</span>
+          </div>
+          <span class="payroll-paid-hrs">${fmtHours(shift.hours)}</span>
+        </div>`;
+      }
+      aHtml += '</details>';
+    }
+    archiveEl.innerHTML = aHtml;
+  }
+
+  // Wire interactions
+  wirePayrollHandlers(allShifts);
+}
+
+function wirePayrollHandlers(allShifts){
+  // Individual checkboxes
+  document.querySelectorAll('.payroll-check').forEach(cb => {
+    cb.addEventListener('change', () => {
+      syncSelectAllState(cb.dataset.worker);
+      refreshPaySelectedBtn(allShifts);
+    });
+  });
+
+  // Select-all per worker
+  document.querySelectorAll('.payroll-select-all').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const worker = cb.dataset.worker;
+      document.querySelectorAll(`.payroll-check[data-worker="${escapeCSS(worker)}"]`).forEach(c => {
+        c.checked = cb.checked;
+      });
+      refreshPaySelectedBtn(allShifts);
+    });
+  });
+
+  // Pay selected button
+  const payBtn = $('btn-pay-selected');
+  if (payBtn) {
+    payBtn.onclick = () => {
+      const checked = [...document.querySelectorAll('.payroll-check:checked')];
+      if (checked.length === 0) return;
+      payShifts(checked.map(c => c.dataset.shiftId), allShifts);
+    };
+  }
+}
+
+function syncSelectAllState(worker){
+  const all = [...document.querySelectorAll(`.payroll-check[data-worker="${escapeCSS(worker)}"]`)];
+  const masterCb = document.querySelector(`.payroll-select-all[data-worker="${escapeCSS(worker)}"]`);
+  if (!masterCb) return;
+  const allChecked = all.length > 0 && all.every(c => c.checked);
+  const someChecked = all.some(c => c.checked);
+  masterCb.checked = allChecked;
+  masterCb.indeterminate = someChecked && !allChecked;
+}
+
+function refreshPaySelectedBtn(allShifts){
+  const payBtn = $('btn-pay-selected');
+  if (!payBtn) return;
+  const checked = [...document.querySelectorAll('.payroll-check:checked')];
+  if (checked.length === 0) {
+    payBtn.style.display = 'none';
+    return;
+  }
+  const totalH = checked.reduce((sum, c) => sum + (parseFloat(c.dataset.hours) || 0), 0);
+  payBtn.style.display = '';
+  payBtn.textContent = `✓ Mark ${checked.length} Shift${checked.length !== 1 ? 's' : ''} as Paid · ${fmtHours(totalH)}`;
+}
+
+function payShifts(shiftIds, allShifts){
+  state.paidShifts = state.paidShifts || [];
+  const now = new Date().toISOString();
+  let count = 0;
+  for (const shiftId of shiftIds) {
+    if (state.paidShifts.find(p => p.shiftId === shiftId)) continue;
+    const shift = allShifts.find(s => s.shiftId === shiftId);
+    if (!shift) continue;
+    const row = document.querySelector(`.payroll-shift-row[data-shift-id="${escapeCSS(shiftId)}"]`);
+    if (row) row.classList.add('paying');
+    state.paidShifts.push({
+      shiftId,
+      worker: shift.worker,
+      date: shift.date,
+      cart: shift.cart,
+      category: shift.category,
+      hours: shift.hours,
+      paidAt: now
+    });
+    count++;
+  }
+  save();
+  setTimeout(() => renderPayroll(), 480);
+  toast(`✓ ${count} shift${count !== 1 ? 's' : ''} marked as paid`);
+}
+
+//============================================================
 // LOCK & SAVE ALL
 //============================================================
 $('btn-lock-all').addEventListener('click', () => {
@@ -989,21 +1360,17 @@ $('btn-lock-all').addEventListener('click', () => {
   }
   if (!confirm(`Lock & save all ${todays.length} entr${todays.length === 1 ? 'y' : 'ies'} for ${date}?\n\nThis will download a CSV and clear the forms for the next day.`)) return;
 
-  // Trigger CSV download FIRST so user has the file
   downloadDayCSV(date);
 
-  // Lock
   todays.forEach(e => {
     e.locked = true;
     e.lockedAt = new Date().toISOString();
   });
   save();
 
-  // Reset date confirmation so glow returns next day
   localStorage.removeItem(DATE_CONFIRMED_KEY);
   initGlobalDate();
 
-  // Re-render — current view will pull a fresh draft for the (possibly new) date
   renderEntryView();
   toast('🔒 Locked ' + todays.length + ' entries · CSV downloaded');
 });
@@ -1037,7 +1404,6 @@ function entryRow(e){
     Reconciliation:  HAS_INVENTORY(cat) ? recon.toFixed(2) : '',
     Locked: e.locked ? 'Y' : 'N',
     Notes: e.notes || '',
-    // per-item morning + evening breakdowns
     ...Object.fromEntries(items.map(it => [`AM ${it.name}`, e.morning?.[it.name] ?? ''])),
     ...Object.fromEntries(items.map(it => [`PM ${it.name}`, e.evening?.[it.name] ?? ''])),
   };
@@ -1256,6 +1622,7 @@ $('restore-file').addEventListener('change', (ev) => {
         state.carts = state.carts || {};
         state.carts[c.key] = structuredClone(DEFAULTS.carts[c.key]);
       }
+      if (!Array.isArray(state.paidShifts)) state.paidShifts = [];
       save();
       showView('entry');
       toast('Restored from backup');
@@ -1348,7 +1715,7 @@ $('dp-confirm').addEventListener('click', () => {
   localStorage.setItem(DATE_CONFIRMED_KEY, todayStamp());
   updateDateDisplay(dpSelected, false);
   closeDatePicker();
-  renderEntryView();  // refresh form to load draft for this date
+  renderEntryView();
 });
 $('dp-overlay').addEventListener('click', e => {
   if (e.target === $('dp-overlay')) closeDatePicker();
@@ -1387,7 +1754,7 @@ const TOUR_STEPS = [
   {
     selector: '.primary-tabs',
     title: '🚚 Pick a category',
-    body: 'Five categories across the top: Novelty Carts, Hot Dog Carts, Fry Truck, B&J Truck, Soft Serve Truck. Tap one to switch.',
+    body: 'Six tabs across the top: five cart categories plus <b>💰 Payroll</b> for tracking employee hours and pay.',
   },
   {
     selector: '.sub-tabs',
@@ -1407,7 +1774,7 @@ const TOUR_STEPS = [
   {
     selector: '#workers-list',
     title: '👷 Workers + hours',
-    body: 'Add each worker who worked the shift, with start + end times. Tips you record below get split evenly across these workers automatically.',
+    body: 'Add each worker with start + end times (snaps to 5-minute intervals). Tips split evenly across named workers automatically.',
     fallbackSelector: 'label[for], #entry-form-content',
   },
   {
@@ -1473,7 +1840,6 @@ function positionTooltip(target) {
   }
   const r = target.getBoundingClientRect();
   const vh = window.innerHeight;
-  // If target is in bottom half of screen, put tooltip on top — else bottom.
   const targetMid = r.top + r.height / 2;
   if (targetMid > vh * 0.55) {
     tt.classList.add('top');
@@ -1484,8 +1850,6 @@ function positionTooltip(target) {
   }
 }
 
-// Returns the index of the nearest visible step from i, searching in direction +1 or -1.
-// Returns -1 if no visible step found in that direction.
 function findVisibleStep(from, dir) {
   let i = from;
   while (i >= 0 && i < TOUR_STEPS.length) {
@@ -1500,7 +1864,6 @@ function showTourStep(i, dir = 1) {
 
   const target = findTourTarget(TOUR_STEPS[i]);
   if (!target) {
-    // Auto-skip: jump forward (or backward) to next visible step
     const next = findVisibleStep(i + dir, dir);
     if (next === -1) { endTour(); return; }
     showTourStep(next, dir);
@@ -1517,7 +1880,6 @@ function showTourStep(i, dir = 1) {
     target.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  // Count only visible steps for the step counter
   const visibleSteps = TOUR_STEPS.map((s, idx) => ({ s, idx }))
     .filter(({ s }) => !!findTourTarget(s));
   const visiblePos = visibleSteps.findIndex(({ idx }) => idx === i) + 1;
@@ -1526,11 +1888,9 @@ function showTourStep(i, dir = 1) {
   $('tt-title').innerHTML = TOUR_STEPS[i].title;
   $('tt-body').innerHTML = TOUR_STEPS[i].body;
 
-  // Back button: find previous visible step
   const prevVisible = findVisibleStep(i - 1, -1);
   $('tt-prev').style.visibility = prevVisible === -1 ? 'hidden' : 'visible';
 
-  // Next button: check if any visible step remains after this
   const nextVisible = findVisibleStep(i + 1, 1);
   const isLast = nextVisible === -1;
   const nextBtn = $('tt-next');
@@ -1569,7 +1929,6 @@ $('tt-prev').addEventListener('click', () => {
 $('tt-skip').addEventListener('click', endTour);
 $('tour-help-btn').addEventListener('click', startTour);
 
-// First-time auto-launch
 if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   setTimeout(startTour, 600);
 }
