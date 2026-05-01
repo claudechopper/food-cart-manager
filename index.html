@@ -42,6 +42,17 @@
   }
   .primary-tab .emoji { display: block; font-size: 1.2rem; margin-bottom: 2px; }
   .primary-tab.active { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+  /* Entry-count badge on category tabs */
+  .primary-tab { position: relative; }
+  .tab-badge {
+    position: absolute; top: 3px; right: 3px;
+    background: #ff3b30; color: #fff;
+    font-size: 0.6rem; font-weight: 800; line-height: 1;
+    min-width: 14px; height: 14px;
+    border-radius: 7px; padding: 0 3px;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
 
   /* SUB TABS */
   .sub-tabs {
@@ -1176,10 +1187,21 @@ $('icon-settings').addEventListener('click', () => showView(activeView === 'sett
 function renderPrimaryTabs(){
   const wrap = $('primary-tabs');
   wrap.innerHTML = '';
+  const date = $('global-date')?.value || todayStamp();
   CATEGORIES.forEach(c => {
+    // Count entries for this category on the current date that have any real data
+    const entryCount = (state.entries || []).filter(e => {
+      if (e.date !== date) return false;
+      // For combo entries, count toward both A-side and B-side categories
+      if (e.category === 'combo') {
+        return (e.comboCategoryA || 'hotdog') === c.key || e.comboCategoryB === c.key;
+      }
+      return e.category === c.key;
+    }).length;
     const btn = document.createElement('button');
     btn.className = 'primary-tab' + (c.key === activeCategory && activeView === 'entry' ? ' active' : '');
-    btn.innerHTML = `<span class="emoji">${c.emoji}</span>${c.label}`;
+    btn.innerHTML = `<span class="emoji">${c.emoji}</span>${c.label}` +
+      (entryCount > 0 ? `<span class="tab-badge">${entryCount}</span>` : '');
     btn.onclick = () => {
       activeCategory = c.key;
       activeCartIdx = 0;
