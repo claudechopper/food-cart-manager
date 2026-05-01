@@ -1551,7 +1551,7 @@ function renderFormHTML(e){
           <div class="recon-box match" id="recon-box">
             <span class="recon-checkmark" id="recon-checkmark">✅</span>
             <span id="recon-status">Balanced</span>
-            <span class="formula" id="recon-formula">Morning − Cash − Debit − Leftover = $0.00</span>
+            <span class="formula" id="recon-formula">Cash + Debit + Leftover − Total Out = $0.00</span>
           </div>
         </div>
       </div>
@@ -1956,7 +1956,9 @@ function recalcCombo(e) {
   const meals       = mealsA + mealsB;
   const cash        = num(document.querySelector('[data-field="cash"]')?.value);
   const debit       = num(document.querySelector('[data-field="debit"]')?.value);
-  const diff        = dispatched - cash - debit - leftover - meals;
+  // Positive diff = returned MORE than dispatched (overage/yellow)
+  // Negative diff = returned LESS than dispatched (short/red)
+  const diff        = cash + debit + leftover + meals - dispatched;
 
   // Update subtotal displays
   const maG = $('combo-morning-a-grand'); if (maG) maG.textContent = fmt(morningA);
@@ -1989,8 +1991,8 @@ function recalcCombo(e) {
     const ck = $('recon-checkmark');
     if (ck) ck.style.display = matched ? 'block' : 'none';
     status.textContent  = matched ? 'Balanced' : `⚠ Discrepancy: ${diff > 0 ? '+' : ''}${fmt(diff)}`;
-    const mealsLabel    = meals > 0 ? ` − Employee Meals ${fmt(meals)}` : '';
-    formula.textContent = `Dispatched ${fmt(dispatched)} − Cash ${fmt(cash)} − Debit ${fmt(debit)} − Leftover ${fmt(leftover)}${mealsLabel} = ${fmt(diff)}`;
+    const mealsIn = meals > 0 ? ` + Meals ${fmt(meals)}` : '';
+    formula.textContent = `Cash ${fmt(cash)} + Debit ${fmt(debit)} + Leftover ${fmt(leftover)}${mealsIn} − Out ${fmt(dispatched)} = ${fmt(diff)}`;
   }
 }
 
@@ -2078,7 +2080,8 @@ function recalcAll(){
 
     const cash  = num(document.querySelector('[data-field="cash"]')?.value);
     const debit = num(document.querySelector('[data-field="debit"]')?.value);
-    const diff  = totalDispatched - cash - debit - leftoverTotal - mealsTotal;
+    // Positive = returned more than dispatched (overage). Negative = short.
+    const diff  = cash + debit + leftoverTotal + mealsTotal - totalDispatched;
     const box     = $('recon-box');
     const status  = $('recon-status');
     const formula = $('recon-formula');
@@ -2093,8 +2096,8 @@ function recalcAll(){
       const ck = $('recon-checkmark');
       if (ck) ck.style.display = matched ? 'block' : 'none';
       status.textContent  = matched ? 'Balanced' : `⚠ Discrepancy: ${diff > 0 ? '+' : ''}${fmt(diff)}`;
-      const mealsLabel = mealsTotal > 0 ? ` − Employee Meals ${fmt(mealsTotal)}` : '';
-      formula.textContent = `${fmt(totalDispatched)} − ${fmt(cash)} − ${fmt(debit)} − Leftover ${fmt(leftoverTotal)}${mealsLabel} = ${fmt(diff)}`;
+      const mealsIn = mealsTotal > 0 ? ` + Meals ${fmt(mealsTotal)}` : '';
+      formula.textContent = `Cash ${fmt(cash)} + Debit ${fmt(debit)} + Leftover ${fmt(leftoverTotal)}${mealsIn} − Out ${fmt(totalDispatched)} = ${fmt(diff)}`;
     }
   }
 
