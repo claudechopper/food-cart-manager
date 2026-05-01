@@ -1127,6 +1127,32 @@ function todayStamp(){
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
+
+// "Real work" detector — true if an entry has any actual data the user typed.
+// Used by Lock & Save (skip empty drafts) and the continue-shift banner.
+// Handles single-cart, non-inventory truck, AND combo entries.
+function entryHasRealWork(e){
+  if (!e) return false;
+  if (e.locked) return true;
+  if ((e.cash || 0) > 0 || (e.debit || 0) > 0 || (e.tips || 0) > 0) return true;
+  const hasInv = obj => obj && typeof obj === 'object' && Object.values(obj).some(v => (v || 0) > 0);
+  // Single-cart inventory fields
+  if (hasInv(e.morning) || hasInv(e.evening) || hasInv(e.meals)) return true;
+  if (Array.isArray(e.reloads) && e.reloads.some(hasInv)) return true;
+  // Combo inventory fields (both A and B sides)
+  if (hasInv(e.morningA) || hasInv(e.eveningA) || hasInv(e.mealsA)) return true;
+  if (hasInv(e.morningB) || hasInv(e.eveningB) || hasInv(e.mealsB)) return true;
+  if (Array.isArray(e.reloadsA) && e.reloadsA.some(hasInv)) return true;
+  if (Array.isArray(e.reloadsB) && e.reloadsB.some(hasInv)) return true;
+  // Legacy combo reload fields (reload1A/reload2A/reload0A etc.) — defensive against P1.3
+  for (const k of Object.keys(e)) {
+    if (/^reload\d+[AB]?$/.test(k) && hasInv(e[k])) return true;
+  }
+  // Workers list with any data (worker name, start, end)
+  if (Array.isArray(e.workers) && e.workers.some(w => w.worker || w.start || w.end)) return true;
+  if (e.notes) return true;
+  return false;
+}
 function activeCartName(){ return state.carts[activeCategory][activeCartIdx]; }
 function fmt(n){ return '$' + (Math.round((n||0) * 100) / 100).toFixed(2); }
 function num(v){ const n = parseFloat(v); return isNaN(n) ? 0 : n; }
@@ -2435,24 +2461,46 @@ function payShifts(shiftIds, allShifts){
 //============================================================
 $('btn-lock-all').addEventListener('click', () => {
   const date = $('global-date').value || todayStamp();
-  const todays = state.entries.filter(e => e.date === date && !e.locked);
-  if (todays.length === 0) {
-    alert('Nothing to lock — no entries for ' + date + ' yet.');
+  const allUnlocked = state.entries.filter(e => e.date === date && !e.locked);
+  // Split into ones with real data (will be locked) and empty phantom drafts (will be deleted).
+  const realEntries  = allUnlocked.filter(entryHasRealWork);
+  const emptyDrafts  = allUnlocked.filter(e => !entryHasRealWork(e));
+  if (realEntries.length === 0) {
+    if (emptyDrafts.length > 0) {
+      if (confirm(`No entries with data for ${date}.\n\n${emptyDrafts.length} empty draft${emptyDrafts.length === 1 ? ' was' : 's were'} created from tab clicks. Discard ${emptyDrafts.length === 1 ? 'it' : 'them'}?`)) {
+        const emptyIds = new Set(emptyDrafts.map(e => e.id));
+        state.entries = state.entries.filter(e => !emptyIds.has(e.id));
+        save();
+        renderEntryView();
+        toast(`🗑 Discarded ${emptyDrafts.length} empty draft${emptyDrafts.length === 1 ? '' : 's'}`);
+      }
+    } else {
+      alert('Nothing to lock — no entries for ' + date + ' yet.');
+    }
     return;
   }
-  if (!confirm(`Lock & save all ${todays.length} entr${todays.length === 1 ? 'y' : 'ies'} for ${date}?\n\nForms will clear ready for the next day.`)) return;
+  const emptyNote = emptyDrafts.length > 0
+    ? `\n\n(${emptyDrafts.length} empty draft${emptyDrafts.length === 1 ? '' : 's'} from tab clicks will be discarded.)`
+    : '';
+  if (!confirm(`Lock & save ${realEntries.length} entr${realEntries.length === 1 ? 'y' : 'ies'} with data for ${date}?${emptyNote}\n\nForms will clear ready for the next day.`)) return;
 
-  todays.forEach(e => {
+  const lockedAt = new Date().toISOString();
+  realEntries.forEach(e => {
     e.locked = true;
-    e.lockedAt = new Date().toISOString();
+    e.lockedAt = lockedAt;
   });
+  if (emptyDrafts.length > 0) {
+    const emptyIds = new Set(emptyDrafts.map(e => e.id));
+    state.entries = state.entries.filter(e => !emptyIds.has(e.id));
+  }
   save();
 
   localStorage.removeItem(DATE_CONFIRMED_KEY);
   initGlobalDate();
 
   renderEntryView();
-  toast('🔒 Locked ' + todays.length + ' entries');
+  const discardMsg = emptyDrafts.length > 0 ? ` · 🗑 ${emptyDrafts.length} empty discarded` : '';
+  toast('🔒 Locked ' + realEntries.length + ' entries' + discardMsg);
 });
 
 //============================================================
@@ -2478,7 +2526,9 @@ function entryRow(e){
                   + itemsB.reduce((s,it)=>s+(e.eveningB?.[it.name]||0)*it.price,0);
     mealsTotal    = itemsA.reduce((s,it)=>s+(e.mealsA?.[it.name]||0)*it.price,0)
                   + itemsB.reduce((s,it)=>s+(e.mealsB?.[it.name]||0)*it.price,0);
-    recon = morningTotal - num(e.cash) - num(e.debit) - leftoverTotal - mealsTotal;
+    // Sign matches live recalc: cash+debit+leftover+meals − dispatched.
+    // Positive = overage (returned more than went out). Negative = short.
+    recon = num(e.cash) + num(e.debit) + leftoverTotal + mealsTotal - morningTotal;
     itemsA.forEach(it => {
       itemAEntries[`AM ${it.name} (${aKey})`] = e.morningA?.[it.name] ?? '';
       itemAEntries[`PM ${it.name} (${aKey})`] = e.eveningA?.[it.name] ?? '';
@@ -2493,7 +2543,8 @@ function entryRow(e){
     morningTotal  = items.reduce((s,it)=>s+(e.morning?.[it.name]||0)*it.price,0)+reloadsTotalVal;
     leftoverTotal = items.reduce((s,it)=>s+(e.evening?.[it.name]||0)*it.price,0);
     mealsTotal    = items.reduce((s,it)=>s+(e.meals?.[it.name]||0)*it.price,0);
-    recon = morningTotal - num(e.cash) - num(e.debit) - leftoverTotal - mealsTotal;
+    // Sign matches live recalc: cash+debit+leftover+meals − dispatched.
+    recon = num(e.cash) + num(e.debit) + leftoverTotal + mealsTotal - morningTotal;
     items.forEach(it => {
       itemAEntries[`AM ${it.name}`] = e.morning?.[it.name] ?? '';
       itemAEntries[`PM ${it.name}`] = e.evening?.[it.name] ?? '';
@@ -2625,14 +2676,14 @@ function renderEntryCard(e){
                   + itemsB.reduce((s,it)=>s+(e.eveningB?.[it.name]||0)*it.price,0);
     const mealsTotal = itemsA.reduce((s,it)=>s+(e.mealsA?.[it.name]||0)*it.price,0)
                      + itemsB.reduce((s,it)=>s+(e.mealsB?.[it.name]||0)*it.price,0);
-    recon = morningTotal - num(e.cash) - num(e.debit) - leftoverTotal - mealsTotal;
+    recon = num(e.cash) + num(e.debit) + leftoverTotal + mealsTotal - morningTotal;
   } else {
     const items = HAS_INVENTORY(e.category) ? state.prices[e.category] : [];
     const reloadsTotalV = (e.reloads||[]).reduce((sum,r)=>sum+items.reduce((s,it)=>s+(r?.[it.name]||0)*it.price,0),0);
     const mealsTotal   = items.reduce((s,it)=>s+(e.meals?.[it.name]||0)*it.price,0);
     morningTotal  = items.reduce((s,it)=>s+(e.morning?.[it.name]||0)*it.price,0) + reloadsTotalV;
     leftoverTotal = items.reduce((s,it)=>s+(e.evening?.[it.name]||0)*it.price,0);
-    recon = morningTotal - num(e.cash) - num(e.debit) - leftoverTotal - mealsTotal;
+    recon = num(e.cash) + num(e.debit) + leftoverTotal + mealsTotal - morningTotal;
   }
   let inv = '';
   if (isCombo || HAS_INVENTORY(e.category)) {
@@ -2983,28 +3034,20 @@ function maybeSwitchToContinueShift(){
     if (dpSelected !== today) { banner.style.display = 'none'; return; }
     const entries = state.entries || [];
     // "Real work" = anything that proves the user actually started today's shift.
-    // Empty drafts (autocreated phantom entries) don't count.
-    const todayHasRealWork = entries.some(e => {
-      if (e.date !== today) return false;
-      if (e.locked) return true;
-      if ((e.cash || 0) > 0 || (e.debit || 0) > 0 || (e.tips || 0) > 0) return true;
-      const hasInv = obj => obj && typeof obj === 'object' && Object.values(obj).some(v => (v || 0) > 0);
-      if (hasInv(e.morning) || hasInv(e.evening) || hasInv(e.meals)) return true;
-      if (Array.isArray(e.reloads) && e.reloads.some(hasInv)) return true;
-      if (Array.isArray(e.workers) && e.workers.some(w => w.worker || w.start || w.end)) return true;
-      return false;
-    });
+    // Uses entryHasRealWork() which handles single-cart, combo, and non-inventory entries.
+    const todayHasRealWork = entries.some(e => e.date === today && entryHasRealWork(e));
     if (todayHasRealWork) { banner.style.display = 'none'; return; }
     // Find most recent unlocked-entry date prior to today
+    // Only resurrect prior dates that have real work (skip empty phantom drafts).
     const priorDates = [...new Set(
-      entries.filter(e => !e.locked && e.date && e.date < today).map(e => e.date)
+      entries.filter(e => !e.locked && e.date && e.date < today && entryHasRealWork(e)).map(e => e.date)
     )].sort().reverse();
     if (!priorDates.length) { banner.style.display = 'none'; return; }
     const candidate = priorDates[0];
     // Only auto-switch if within 3 days (avoid resurrecting ancient drafts)
     const daysDiff = Math.floor((Date.parse(today) - Date.parse(candidate)) / 86400000);
     if (daysDiff > 3 || daysDiff < 1) { banner.style.display = 'none'; return; }
-    const candidateCount = entries.filter(e => e.date === candidate && !e.locked).length;
+    const candidateCount = entries.filter(e => e.date === candidate && !e.locked && entryHasRealWork(e)).length;
     // Switch the global date to the candidate
     dpSelected = candidate;
     $('global-date').value = candidate;
