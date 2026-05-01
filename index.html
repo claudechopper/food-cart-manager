@@ -2208,8 +2208,12 @@ function refreshGlow(){
 // PAYROLL VIEW
 //============================================================
 function gatherAllShifts(){
+  // Only LOCKED entries count toward payroll. Unlocked drafts can still change
+  // (worker, times, category) so paying for them is unsafe — finalize the day
+  // (Lock & Save All) to make those shifts payable.
   const shifts = [];
   for (const entry of state.entries) {
+    if (!entry.locked) continue;
     for (const w of (entry.workers || [])) {
       if (!w.worker || !w.worker.trim()) continue;
       shifts.push({
@@ -2228,6 +2232,19 @@ function gatherAllShifts(){
     }
   }
   return shifts;
+}
+
+// Count workers in unlocked drafts so we can show a "lock the day to include
+// these N shifts" nudge in the payroll view.
+function countUnlockedShifts(){
+  let n = 0;
+  for (const entry of state.entries) {
+    if (entry.locked) continue;
+    for (const w of (entry.workers || [])) {
+      if (w.worker && w.worker.trim()) n++;
+    }
+  }
+  return n;
 }
 
 function renderPayroll(){
@@ -2253,10 +2270,15 @@ function renderPayroll(){
   }
 
   const unpaidEl = $('payroll-unpaid');
+  // Nudge: tell user about unlocked draft shifts that aren't included in payroll
+  const unlockedCount = countUnlockedShifts();
+  const unlockedNote = unlockedCount > 0
+    ? `<div class="empty" style="background:#fff8e6;color:#7a5200;border:1px solid #f5c518;border-radius:8px;padding:10px;margin-bottom:10px;font-size:0.9rem">📝 ${unlockedCount} shift${unlockedCount === 1 ? '' : 's'} in unlocked drafts — finalize the day (🔒 Lock & Save) to add ${unlockedCount === 1 ? 'it' : 'them'} to payroll.</div>`
+    : '';
   if (Object.keys(byWorker).length === 0) {
-    unpaidEl.innerHTML = '<div class="empty">No unpaid hours. Add workers to shift entries first.</div>';
+    unpaidEl.innerHTML = unlockedNote + '<div class="empty">No unpaid hours. Add workers to shift entries first.</div>';
   } else {
-    let html = '';
+    let html = unlockedNote;
     for (const [worker, shifts] of Object.entries(byWorker)) {
       const workerTotal = shifts.reduce((s, sh) => s + (sh.hours || 0), 0);
       const sortedShifts = shifts.slice().sort((a, b) => a.date.localeCompare(b.date));
@@ -2436,13 +2458,26 @@ function wirePayrollHandlers(allShifts){
     });
   });
 
-  // Pay selected (bulk checkbox) button
+  // Pay selected (bulk checkbox) button — confirms with worker breakdown + total hours
   const payBtn = $('btn-pay-selected');
   if (payBtn) {
     payBtn.onclick = () => {
       const checked = [...document.querySelectorAll('.payroll-check:checked')];
       if (checked.length === 0) return;
-      payShifts(checked.map(c => c.dataset.shiftId), allShifts);
+      const ids = checked.map(c => c.dataset.shiftId);
+      const selected = allShifts.filter(s => ids.includes(s.shiftId));
+      const totalH = selected.reduce((sum, s) => sum + (s.hours || 0), 0);
+      const byWorker = {};
+      for (const s of selected) {
+        if (!byWorker[s.worker]) byWorker[s.worker] = 0;
+        byWorker[s.worker] += s.hours || 0;
+      }
+      const breakdown = Object.entries(byWorker)
+        .map(([w, h]) => `  • ${w}: ${fmtHours(h)}`)
+        .join('\n');
+      const msg = `Mark ${selected.length} shift${selected.length !== 1 ? 's' : ''} as paid (total ${fmtHours(totalH)})?\n\n${breakdown}\n\nThis can be undone in the Paid archive below.`;
+      if (!confirm(msg)) return;
+      payShifts(ids, allShifts);
     };
   }
 }
@@ -3036,12 +3071,11 @@ $('restore-file').addEventListener('change', (ev) => {
       if (!data || typeof data !== 'object') throw new Error('bad file');
       if (!confirm('Replace ALL current data with this backup?')) return;
       state = data;
-      for (const k of Object.keys(DEFAULTS)) if (!(k in state)) state[k] = structuredClone(DEFAULTS[k]);
-      for (const c of CATEGORIES) if (!Array.isArray(state.carts?.[c.key])) {
-        state.carts = state.carts || {};
-        state.carts[c.key] = structuredClone(DEFAULTS.carts[c.key]);
-      }
-      if (!Array.isArray(state.paidShifts)) state.paidShifts = [];
+      // Run the SAME normalization passes as cloud-pull / boot, so any older
+      // schema (legacy reload1/reload2 flat fields, missing combo fields,
+      // missing comboCategoryA, etc.) gets migrated forward immediately.
+      normalizeState(state);
+      for (const e of (state.entries || [])) normalizeEntry(e);
       save();
       showView('entry');
       toast('Restored from backup');
