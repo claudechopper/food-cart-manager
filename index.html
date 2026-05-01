@@ -1424,20 +1424,21 @@ function renderComboFormHTML(e) {
       </div>`).join('');
   }
 
-  function comboReloadHTML(num, fieldA, fieldB, dataA, dataB) {
-    const openFlag = num === 1 ? reload1Open : reload2Open;
-    if (!openFlag) {
-      return `<button type="button" class="add-optional-btn" id="add-reload${num}-btn">
-        🔄 Add Reload #${num} (both carts)</button>`;
+  function comboReloadHTML(idx) {
+    const fieldA = `reload${idx}A`;
+    const fieldB = `reload${idx}B`;
+    if (!expandedReloads.has(idx)) {
+      return `<button type="button" class="add-optional-btn" data-reload-idx="${idx}">
+        🔄 Add Reload #${idx + 1} (both carts)</button>`;
     }
     return `<div class="section reload-section">
-      <h3 class="reload-header">🔄 Reload #${num} — ${catA.emoji} Hotdog</h3>
-      ${invRowsHTML(itemsA, fieldA, dataA)}
-      <h3 class="reload-header" style="margin-top:8px">🔄 Reload #${num} — ${catB.emoji} ${escapeHtml(e.comboCategoryB)}</h3>
-      ${invRowsHTML(itemsB, fieldB, dataB)}
+      <h3 class="reload-header">🔄 Reload #${idx + 1} — ${catA.emoji} Hotdog</h3>
+      ${invRowsHTML(itemsA, fieldA, e[fieldA])}
+      <h3 class="reload-header" style="margin-top:8px">🔄 Reload #${idx + 1} — ${catB.emoji} ${escapeHtml(e.comboCategoryB)}</h3>
+      ${invRowsHTML(itemsB, fieldB, e[fieldB])}
       <div class="grand-total" style="border-color:#ff9500">
-        <span>Reload #${num} Combined</span>
-        <span class="amount" id="combo-reload${num}-grand">$0.00</span>
+        <span>Reload #${idx + 1} Combined</span>
+        <span class="amount" id="combo-reload-grand-${idx}">$0.00</span>
       </div>
     </div>`;
   }
@@ -1505,8 +1506,12 @@ function renderComboFormHTML(e) {
       <span>⬆ Combined Morning Total</span><span class="amount" id="dispatched-grand">$0.00</span>
     </div>
 
-    ${comboReloadHTML(1, 'reload1A', 'reload1B', e.reload1A, e.reload1B)}
-    ${comboReloadHTML(2, 'reload2A', 'reload2B', e.reload2A, e.reload2B)}
+    ${(() => {
+      const maxIdx = Math.max((e.reloadsA || []).length, (e.reloadsB || []).length);
+      const html = Array.from({length: maxIdx}, (_, idx) => comboReloadHTML(idx)).join('');
+      return html + `<button type="button" class="add-optional-btn" id="add-new-reload-btn">
+        🔄 ➕ Add Another Reload (both carts)</button>`;
+    })()}
     ${comboMealsHTML()}
 
     <div class="section evening">
@@ -1657,10 +1662,19 @@ function attachFormHandlers(draft){
       renderEntryView();
     }
     if (ev.target.id === 'add-new-reload-btn') {
-      _draft.reloads = _draft.reloads || [];
-      const newIdx = _draft.reloads.length;
-      _draft.reloads.push({});
-      expandedReloads.add(newIdx);
+      if (_draft.category === 'combo') {
+        _draft.reloadsA = _draft.reloadsA || [];
+        _draft.reloadsB = _draft.reloadsB || [];
+        const newIdx = Math.max(_draft.reloadsA.length, _draft.reloadsB.length);
+        while (_draft.reloadsA.length <= newIdx) _draft.reloadsA.push({});
+        while (_draft.reloadsB.length <= newIdx) _draft.reloadsB.push({});
+        expandedReloads.add(newIdx);
+      } else {
+        _draft.reloads = _draft.reloads || [];
+        const newIdx = _draft.reloads.length;
+        _draft.reloads.push({});
+        expandedReloads.add(newIdx);
+      }
       renderEntryView();
     }
   });
@@ -1752,14 +1766,20 @@ function recalcCombo(e) {
 
   const morningA   = sumField(itemsA, 'morningA',  e.morningA);
   const morningB   = sumField(itemsB, 'morningB',  e.morningB);
-  const reload1A   = reload1Open ? sumField(itemsA, 'reload1A', e.reload1A) :
-                     itemsA.reduce((s,it)=>s+(e.reload1A?.[it.name]||0)*it.price, 0);
-  const reload1B   = reload1Open ? sumField(itemsB, 'reload1B', e.reload1B) :
-                     itemsB.reduce((s,it)=>s+(e.reload1B?.[it.name]||0)*it.price, 0);
-  const reload2A   = reload2Open ? sumField(itemsA, 'reload2A', e.reload2A) :
-                     itemsA.reduce((s,it)=>s+(e.reload2A?.[it.name]||0)*it.price, 0);
-  const reload2B   = reload2Open ? sumField(itemsB, 'reload2B', e.reload2B) :
-                     itemsB.reduce((s,it)=>s+(e.reload2B?.[it.name]||0)*it.price, 0);
+  // Sum all reloads for side A
+  let reloadA = 0;
+  (e.reloadsA || []).forEach((_, idx) => {
+    const field = `reload${idx}A`;
+    reloadA += expandedReloads.has(idx) ? sumField(itemsA, field, e[field]) :
+               itemsA.reduce((s,it)=>s+(e[field]?.[it.name]||0)*it.price, 0);
+  });
+  // Sum all reloads for side B
+  let reloadB = 0;
+  (e.reloadsB || []).forEach((_, idx) => {
+    const field = `reload${idx}B`;
+    reloadB += expandedReloads.has(idx) ? sumField(itemsB, field, e[field]) :
+               itemsB.reduce((s,it)=>s+(e[field]?.[it.name]||0)*it.price, 0);
+  });
   const mealsA     = mealsOpen   ? sumField(itemsA, 'mealsA',   e.mealsA)   :
                      itemsA.reduce((s,it)=>s+(e.mealsA?.[it.name]||0)*it.price, 0);
   const mealsB     = mealsOpen   ? sumField(itemsB, 'mealsB',   e.mealsB)   :
@@ -1767,8 +1787,8 @@ function recalcCombo(e) {
   const eveningA   = sumField(itemsA, 'eveningA', e.eveningA);
   const eveningB   = sumField(itemsB, 'eveningB', e.eveningB);
 
-  const dispatchedA = morningA + reload1A + reload2A;
-  const dispatchedB = morningB + reload1B + reload2B;
+  const dispatchedA = morningA + reloadA;
+  const dispatchedB = morningB + reloadB;
   const dispatched  = dispatchedA + dispatchedB;
   const leftover    = eveningA + eveningB;
   const meals       = mealsA + mealsB;
@@ -1780,8 +1800,19 @@ function recalcCombo(e) {
   const maG = $('combo-morning-a-grand'); if (maG) maG.textContent = fmt(morningA);
   const mbG = $('combo-morning-b-grand'); if (mbG) mbG.textContent = fmt(morningB);
   const dG  = $('dispatched-grand');      if (dG)  dG.textContent  = fmt(dispatched);
-  const r1G = $('combo-reload1-grand');   if (r1G) r1G.textContent = fmt(reload1A + reload1B);
-  const r2G = $('combo-reload2-grand');   if (r2G) r2G.textContent = fmt(reload2A + reload2B);
+  // Update reload grand totals for each index
+  const maxReloadIdx = Math.max((e.reloadsA || []).length, (e.reloadsB || []).length);
+  for (let idx = 0; idx < maxReloadIdx; idx++) {
+    let reloadTotal = 0;
+    if (expandedReloads.has(idx)) {
+      reloadTotal += sumField(itemsA, `reload${idx}A`, e[`reload${idx}A`]);
+      reloadTotal += sumField(itemsB, `reload${idx}B`, e[`reload${idx}B`]);
+    } else {
+      itemsA.forEach(it => reloadTotal += (e[`reload${idx}A`]?.[it.name]||0)*it.price);
+      itemsB.forEach(it => reloadTotal += (e[`reload${idx}B`]?.[it.name]||0)*it.price);
+    }
+    const rg = $(`combo-reload-grand-${idx}`); if (rg) rg.textContent = fmt(reloadTotal);
+  }
   const mG  = $('combo-meals-grand');     if (mG)  mG.textContent  = fmt(meals);
   const lgG = $('leftover-grand');        if (lgG) lgG.textContent = fmt(leftover);
 
