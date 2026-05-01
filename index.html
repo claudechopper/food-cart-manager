@@ -863,6 +863,8 @@
 </div>
 <button class="tour-help-btn" id="tour-help-btn" title="Show feature tour">?</button>
 
+<!-- Pure reconciliation math — also imported by test/recon.test.js -->
+<script src="recon.js"></script>
 <script>
 // ─── Supabase Cloud Sync Config ────────────────────────────────
 const SUPABASE_URL = 'https://rwusdbjxpwvktjfjereh.supabase.co';
@@ -2587,25 +2589,14 @@ function entryRow(e){
   const workers = (e.workers || []).filter(w => w.worker)
     .map(w => `${w.worker} (${w.start || '?'}–${w.end || '?'})`).join('; ');
 
-  let morningTotal = 0, leftoverTotal = 0, mealsTotal = 0, recon = 0;
   let itemAEntries = {}, itemBEntries = {};
+  // Single source of truth for the math — see recon.js.
+  const { dispatched: morningTotal, leftover: leftoverTotal, meals: mealsTotal, recon } =
+    ReconMath.computeReconciliation(e, state.prices);
   if (isCombo) {
     const aKey = e.comboCategoryA || 'hotdog';
     const itemsA = state.prices[aKey] || [];
     const itemsB = state.prices[e.comboCategoryB] || [];
-    const sumItems = (items, dict) => items.reduce((s,it)=>s+(dict?.[it.name]||0)*it.price, 0);
-    const morningA = sumItems(itemsA, e.morningA);
-    const morningB = sumItems(itemsB, e.morningB);
-    const reloadsA_total = (e.reloadsA||[]).reduce((s, r) => s + sumItems(itemsA, r), 0);
-    const reloadsB_total = (e.reloadsB||[]).reduce((s, r) => s + sumItems(itemsB, r), 0);
-    morningTotal = morningA + morningB + reloadsA_total + reloadsB_total;
-    leftoverTotal = itemsA.reduce((s,it)=>s+(e.eveningA?.[it.name]||0)*it.price,0)
-                  + itemsB.reduce((s,it)=>s+(e.eveningB?.[it.name]||0)*it.price,0);
-    mealsTotal    = itemsA.reduce((s,it)=>s+(e.mealsA?.[it.name]||0)*it.price,0)
-                  + itemsB.reduce((s,it)=>s+(e.mealsB?.[it.name]||0)*it.price,0);
-    // Sign matches live recalc: cash+debit+leftover+meals − dispatched.
-    // Positive = overage (returned more than went out). Negative = short.
-    recon = num(e.cash) + num(e.debit) + leftoverTotal + mealsTotal - morningTotal;
     itemsA.forEach(it => {
       itemAEntries[`AM ${it.name} (${aKey})`] = e.morningA?.[it.name] ?? '';
       itemAEntries[`PM ${it.name} (${aKey})`] = e.eveningA?.[it.name] ?? '';
@@ -2616,12 +2607,6 @@ function entryRow(e){
     });
   } else {
     const items = HAS_INVENTORY(cat) ? state.prices[cat] : [];
-    const reloadsTotalVal = (e.reloads||[]).reduce((sum,r)=>sum+items.reduce((s,it)=>s+(r?.[it.name]||0)*it.price,0),0);
-    morningTotal  = items.reduce((s,it)=>s+(e.morning?.[it.name]||0)*it.price,0)+reloadsTotalVal;
-    leftoverTotal = items.reduce((s,it)=>s+(e.evening?.[it.name]||0)*it.price,0);
-    mealsTotal    = items.reduce((s,it)=>s+(e.meals?.[it.name]||0)*it.price,0);
-    // Sign matches live recalc: cash+debit+leftover+meals − dispatched.
-    recon = num(e.cash) + num(e.debit) + leftoverTotal + mealsTotal - morningTotal;
     items.forEach(it => {
       itemAEntries[`AM ${it.name}`] = e.morning?.[it.name] ?? '';
       itemAEntries[`PM ${it.name}`] = e.evening?.[it.name] ?? '';
@@ -2742,27 +2727,9 @@ function renderEntryCard(e){
   const workers = (e.workers || []).filter(w => w.worker)
     .map(w => `${escapeHtml(w.worker)} (${fmt12(w.start) || '?'}–${fmt12(w.end) || '?'})`).join(', ');
 
-  let morningTotal = 0, leftoverTotal = 0, recon = 0;
-  if (isCombo) {
-    const itemsA = state.prices[e.comboCategoryA || 'hotdog'] || [];
-    const itemsB = state.prices[e.comboCategoryB] || [];
-    const sumItems = (items, dict) => items.reduce((s,it)=>s+(dict?.[it.name]||0)*it.price, 0);
-    const dispA = sumItems(itemsA, e.morningA) + (e.reloadsA||[]).reduce((s,r)=>s+sumItems(itemsA, r), 0);
-    const dispB = sumItems(itemsB, e.morningB) + (e.reloadsB||[]).reduce((s,r)=>s+sumItems(itemsB, r), 0);
-    morningTotal = dispA + dispB;
-    leftoverTotal = itemsA.reduce((s,it)=>s+(e.eveningA?.[it.name]||0)*it.price,0)
-                  + itemsB.reduce((s,it)=>s+(e.eveningB?.[it.name]||0)*it.price,0);
-    const mealsTotal = itemsA.reduce((s,it)=>s+(e.mealsA?.[it.name]||0)*it.price,0)
-                     + itemsB.reduce((s,it)=>s+(e.mealsB?.[it.name]||0)*it.price,0);
-    recon = num(e.cash) + num(e.debit) + leftoverTotal + mealsTotal - morningTotal;
-  } else {
-    const items = HAS_INVENTORY(e.category) ? state.prices[e.category] : [];
-    const reloadsTotalV = (e.reloads||[]).reduce((sum,r)=>sum+items.reduce((s,it)=>s+(r?.[it.name]||0)*it.price,0),0);
-    const mealsTotal   = items.reduce((s,it)=>s+(e.meals?.[it.name]||0)*it.price,0);
-    morningTotal  = items.reduce((s,it)=>s+(e.morning?.[it.name]||0)*it.price,0) + reloadsTotalV;
-    leftoverTotal = items.reduce((s,it)=>s+(e.evening?.[it.name]||0)*it.price,0);
-    recon = num(e.cash) + num(e.debit) + leftoverTotal + mealsTotal - morningTotal;
-  }
+  // Single source of truth for the math — see recon.js.
+  const { dispatched: morningTotal, leftover: leftoverTotal, recon } =
+    ReconMath.computeReconciliation(e, state.prices);
   let inv = '';
   if (isCombo || HAS_INVENTORY(e.category)) {
     inv = `
