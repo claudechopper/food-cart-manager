@@ -762,7 +762,6 @@
       <div class="dp-grid" id="dp-grid"></div>
       <div class="dp-actions">
         <button class="btn secondary" id="dp-cancel">Cancel</button>
-        <button class="btn success" id="dp-confirm">✓ Confirm Date</button>
       </div>
     </div>
   </div>
@@ -917,9 +916,17 @@ const DEFAULT_PRICES = {
     { name: 'Water',        price: 3 },
     { name: 'Pop (bottle)', price: 4 },
     { name: 'Gatorade',     price: 4 },
+  ],
+  // B&J needs an inventory catalog so Hotdog + B&J combo mode is usable out of the box.
+  // These mirror the novelty defaults and can be repriced from Settings.
+  benjerry: [
+    { name: 'Magnums',      price: 7 },
+    { name: 'Novelties',    price: 5 },
+    { name: 'I.C.Sandwich', price: 6 },
+    { name: 'Cones',        price: 6 },
   ]
 };
-const HAS_INVENTORY = c => c === 'novelty' || c === 'hotdog';
+const HAS_INVENTORY = c => c === 'novelty' || c === 'hotdog' || c === 'benjerry';
 
 const KEY = 'foodCartManager_v3';
 const DEFAULTS = {
@@ -1064,6 +1071,7 @@ function normalizeEntry(e) {
     if (!e.comboCategoryA) e.comboCategoryA = 'hotdog';
   }
   if (!Array.isArray(e.workers)) e.workers = [{ worker: '', start: '', end: '' }];
+  console.info('[FCM] normalizeEntry:', e.id, e.category, e.date);
 }
 
 async function pullFromCloud() {
@@ -1092,6 +1100,7 @@ async function pullFromCloud() {
     initialPullDone = true;
     lastSyncError = '';
     setSyncStatus('ok');
+    console.info('[FCM] pullFromCloud: loaded', (state.entries || []).length, 'entries, remoteAt:', remoteAt);
     if (!wasEmpty) toast('↑ Synced from another device');
   } catch(e) {
     initialPullDone = true; // Don't block pushes forever if pull fails
@@ -1240,6 +1249,7 @@ function renderPrimaryTabs(){
     // Count entries for this category on the current date that have any real data
     const entryCount = (state.entries || []).filter(e => {
       if (e.date !== date) return false;
+      if (!entryHasRealWork(e)) return false;
       // For combo entries, count toward both A-side and B-side categories
       if (e.category === 'combo') {
         return (e.comboCategoryA || 'hotdog') === c.key || e.comboCategoryB === c.key;
@@ -1428,15 +1438,21 @@ function renderEntryView(){
   banner.style.setProperty('--banner-color', color);
   const cat = CATEGORIES.find(c => c.key === activeCategory);
   const draft = getOrCreateDraft();
+  // Show a soft "no data yet" tag when this draft is empty — prevents the user
+  // from thinking they've already started a shift here when they haven't.
+  const emptyTag = (!draft.locked && !entryHasRealWork(draft))
+    ? ` <span style="opacity:0.75;font-weight:500;font-style:italic">(no data yet)</span>`
+    : '';
   if (draft.category === 'combo') {
+    const catA = CATEGORIES.find(c => c.key === (draft.comboCategoryA || 'hotdog')) || { emoji: '🚚' };
     const catB = CATEGORIES.find(c => c.key === draft.comboCategoryB) || { emoji: '🚚' };
     banner.style.setProperty('--banner-color', '#8b1a1a');
     banner.style.background = `linear-gradient(90deg, #8b1a1a 50%, #4a1a6b 50%)`;
-    banner.innerHTML = `<span style="font-size:13px">${cat.emoji} ${escapeHtml(cartName)} ＋ ${catB.emoji} ${escapeHtml(draft.comboCartB || '')}</span>
+    banner.innerHTML = `<span style="font-size:13px">${catA.emoji} ${escapeHtml(draft.cart || '')} ＋ ${catB.emoji} ${escapeHtml(draft.comboCartB || '')}${emptyTag}</span>
       <span class="small" style="background:#ff9500;color:#000;padding:2px 6px;border-radius:4px;font-weight:800;font-size:10px">COMBO</span>`;
   } else {
     banner.style.background = ''; // reset to CSS-driven background using --banner-color
-    banner.innerHTML = `<span>${cat.emoji} ${escapeHtml(cartName)}</span>
+    banner.innerHTML = `<span>${cat.emoji} ${escapeHtml(cartName)}${emptyTag}</span>
       <span class="small">${HAS_INVENTORY(activeCategory) ? 'Morning + Evening' : 'Hours + cash record'}</span>`;
   }
 
@@ -1985,7 +2001,7 @@ function recalcCombo(e) {
     let total = 0;
     items.forEach(it => {
       const inp = document.querySelector(`[data-combo-field="${field}"][data-item="${cssEscape(it.name)}"]`);
-      const cnt = inp ? num(inp.value) : (e[field]?.[it.name] || 0);
+      const cnt = inp ? num(inp.value) : (dataAttr?.[it.name] || 0);
       const val = cnt * it.price;
       total += val;
       const cell = document.querySelector(`[data-combo-total="${field}-${cssEscape(it.name)}"]`);
@@ -2001,19 +2017,19 @@ function recalcCombo(e) {
   (e.reloadsA || []).forEach((dataObj, idx) => {
     const field = `reloadsA.${idx}`;
     reloadA += expandedReloads.has(idx) ? sumField(itemsA, field, dataObj) :
-               itemsA.reduce((s,it)=>s+(dataObj?.[it.name]||0)*it.price, 0);
+               ReconMath.sumItems(itemsA, dataObj);
   });
   // Sum all reloads for side B
   let reloadB = 0;
   (e.reloadsB || []).forEach((dataObj, idx) => {
     const field = `reloadsB.${idx}`;
     reloadB += expandedReloads.has(idx) ? sumField(itemsB, field, dataObj) :
-               itemsB.reduce((s,it)=>s+(dataObj?.[it.name]||0)*it.price, 0);
+               ReconMath.sumItems(itemsB, dataObj);
   });
   const mealsA     = mealsOpen   ? sumField(itemsA, 'mealsA',   e.mealsA)   :
-                     itemsA.reduce((s,it)=>s+(e.mealsA?.[it.name]||0)*it.price, 0);
+                     ReconMath.sumItems(itemsA, e.mealsA);
   const mealsB     = mealsOpen   ? sumField(itemsB, 'mealsB',   e.mealsB)   :
-                     itemsB.reduce((s,it)=>s+(e.mealsB?.[it.name]||0)*it.price, 0);
+                     ReconMath.sumItems(itemsB, e.mealsB);
   const eveningA   = sumField(itemsA, 'eveningA', e.eveningA);
   const eveningB   = sumField(itemsB, 'eveningB', e.eveningB);
 
@@ -2035,13 +2051,17 @@ function recalcCombo(e) {
   // Update reload grand totals for each index
   const maxReloadIdx = Math.max((e.reloadsA || []).length, (e.reloadsB || []).length);
   for (let idx = 0; idx < maxReloadIdx; idx++) {
+    const fieldA = `reloadsA.${idx}`;
+    const fieldB = `reloadsB.${idx}`;
+    const dataA = e.reloadsA?.[idx];
+    const dataB = e.reloadsB?.[idx];
     let reloadTotal = 0;
     if (expandedReloads.has(idx)) {
-      reloadTotal += sumField(itemsA, `reload${idx}A`, e[`reload${idx}A`]);
-      reloadTotal += sumField(itemsB, `reload${idx}B`, e[`reload${idx}B`]);
+      reloadTotal += sumField(itemsA, fieldA, dataA);
+      reloadTotal += sumField(itemsB, fieldB, dataB);
     } else {
-      itemsA.forEach(it => reloadTotal += (e[`reload${idx}A`]?.[it.name]||0)*it.price);
-      itemsB.forEach(it => reloadTotal += (e[`reload${idx}B`]?.[it.name]||0)*it.price);
+      reloadTotal += ReconMath.sumItems(itemsA, dataA);
+      reloadTotal += ReconMath.sumItems(itemsB, dataB);
     }
     const rg = $(`combo-reload-grand-${idx}`); if (rg) rg.textContent = fmt(reloadTotal);
   }
@@ -2570,6 +2590,7 @@ $('btn-lock-all').addEventListener('click', () => {
     const emptyIds = new Set(emptyDrafts.map(e => e.id));
     state.entries = state.entries.filter(e => !emptyIds.has(e.id));
   }
+  console.info('[FCM] Lock & Save: locked', realEntries.length, 'entries, discarded', emptyDrafts.length, 'drafts, date:', date);
   save();
 
   localStorage.removeItem(DATE_CONFIRMED_KEY);
@@ -2614,7 +2635,7 @@ function entryRow(e){
   }
   return {
     Date: e.date,
-    Category: isCombo ? `combo (hotdog + ${e.comboCategoryB})` : cat,
+    Category: isCombo ? `combo (${e.comboCategoryA || 'hotdog'} + ${e.comboCategoryB || ''})` : cat,
     Cart: isCombo ? `${e.cart} + ${e.comboCartB}` : e.cart,
     Location: e.location,
     Workers: workers,
@@ -2756,7 +2777,10 @@ function renderEntryCard(e){
 function renderSaved(){
   const list = $('saved-list');
   const filter = $('filter-date').value;
-  const allEntries = state.entries.filter(e => !filter || e.date === filter);
+  const allEntries = state.entries.filter(e =>
+    (!filter || e.date === filter) &&
+    (e.locked || entryHasRealWork(e))
+  );
 
   if (allEntries.length === 0){
     list.innerHTML = '<div class="empty">No entries yet.</div>';
@@ -3159,7 +3183,7 @@ function renderCalendarGrid(){
     if (ds === today) cell.classList.add('dp-today');
     if (ds === dpSelected) cell.classList.add('dp-selected');
     cell.textContent = d;
-    cell.onclick = () => { dpSelected = ds; renderCalendarGrid(); };
+    cell.onclick = () => confirmDate(ds);
     grid.appendChild(cell);
   }
   const totalCells = Math.ceil((firstWeekday + daysInMonth) / 7) * 7;
@@ -3180,18 +3204,20 @@ $('dp-next').addEventListener('click', () => {
   renderCalendarGrid();
 });
 $('dp-cancel').addEventListener('click', closeDatePicker);
-$('dp-confirm').addEventListener('click', () => {
-  if (!dpSelected) { alert('Please tap a day first.'); return; }
-  $('global-date').value = dpSelected;
-  localStorage.setItem(DATE_KEY, dpSelected);
+// Confirm a selected date — called on day tap (no separate confirm button needed).
+function confirmDate(ds) {
+  if (!ds) return;
+  dpSelected = ds;
+  $('global-date').value = ds;
+  localStorage.setItem(DATE_KEY, ds);
   localStorage.setItem(DATE_CONFIRMED_KEY, todayStamp());
-  updateDateDisplay(dpSelected, false);
+  updateDateDisplay(ds, false);
   // User has now made a deliberate date choice — hide the continue banner.
   const banner = $('continue-shift-banner');
   if (banner) banner.style.display = 'none';
   closeDatePicker();
   renderEntryView();
-});
+}
 $('dp-overlay').addEventListener('click', e => {
   if (e.target === $('dp-overlay')) closeDatePicker();
 });
