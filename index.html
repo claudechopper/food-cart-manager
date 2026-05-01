@@ -114,6 +114,29 @@
   }
   .date-master-glow:focus { animation: none; }
 
+  /* Continue-prior-shift banner: shown when app boots and user has unfinished entries from a prior day */
+  .continue-shift-banner {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; margin: 8px 0 0 0;
+    background: linear-gradient(135deg, #fff8d6 0%, #ffe89e 100%);
+    border: 2px solid #d4a017; border-radius: 10px;
+    color: #6b4f00; font-weight: 600; font-size: 0.92rem;
+    box-shadow: 0 0 0 3px rgba(245,197,24,0.25);
+    animation: continuePulse 2s ease-in-out infinite;
+  }
+  .continue-shift-banner #continue-shift-text { flex: 1; }
+  .continue-shift-banner #continue-shift-text b { font-weight: 800; }
+  .continue-shift-banner button {
+    flex: 0 0 auto; background: none; border: none; cursor: pointer;
+    color: #6b4f00; font-size: 1rem; font-weight: 800; padding: 4px 8px;
+    border-radius: 6px;
+  }
+  .continue-shift-banner button:hover { background: rgba(212,160,23,0.2); }
+  @keyframes continuePulse {
+    0%,100% { box-shadow: 0 0 0 3px rgba(245,197,24,0.25); }
+    50%     { box-shadow: 0 0 0 6px rgba(245,197,24,0.45); }
+  }
+
   /* LOCK ALL button */
   .lock-all-btn {
     flex: 0 0 auto; width: 94px; padding: 10px 8px;
@@ -706,6 +729,12 @@
     <button class="lock-all-btn" id="btn-lock-all">🔒 Lock & Save All Entries + Wipe for Next Day</button>
   </div>
 
+  <!-- Continue-prior-shift banner (shown when user lands on today with no entries but has unfinished work from a prior date) -->
+  <div id="continue-shift-banner" class="continue-shift-banner" style="display:none">
+    <span id="continue-shift-text"></span>
+    <button type="button" id="continue-shift-dismiss" title="Start fresh today instead">✕</button>
+  </div>
+
   <!-- Custom calendar bottom sheet -->
   <div id="dp-overlay" class="dp-overlay" style="display:none">
     <div class="dp-sheet" id="dp-sheet">
@@ -1025,6 +1054,7 @@ async function pullFromCloud() {
     state = rows[0].state;
     for (const e of (state.entries || [])) normalizeEntry(e);
     localStorage.setItem(KEY, JSON.stringify(state));
+    maybeSwitchToContinueShift();
     showView(activeView);
     initialPullDone = true;
     lastSyncError = '';
@@ -1080,7 +1110,12 @@ function toast(msg){
   clearTimeout(toast._h);
   toast._h = setTimeout(()=>t.classList.remove('show'), 1800);
 }
-function todayStamp(){ return new Date().toISOString().slice(0,10); }
+function todayStamp(){
+  // Local-timezone YYYY-MM-DD. Avoids the late-evening UTC rollover bug
+  // where Eastern users at 8 PM see "tomorrow" and lose their entries.
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 function activeCartName(){ return state.carts[activeCategory][activeCartIdx]; }
 function fmt(n){ return '$' + (Math.round((n||0) * 100) / 100).toFixed(2); }
 function num(v){ const n = parseFloat(v); return isNaN(n) ? 0 : n; }
@@ -2908,6 +2943,66 @@ function initGlobalDate(){
   $('global-date').value = dpSelected;
   updateDateDisplay(dpSelected, needsConfirm);
 }
+
+// If app boots with global-date == today AND today has 0 entries
+// AND there's an unlocked shift from within the last 3 days, auto-switch
+// to that prior date and surface a banner offering to start fresh.
+// Called once after pullFromCloud completes (so state.entries is populated).
+function maybeSwitchToContinueShift(){
+  try {
+    const banner = $('continue-shift-banner');
+    const text = $('continue-shift-text');
+    if (!banner || !text) return;
+    // If user has manually picked a different date already, don't override
+    const today = todayStamp();
+    if (dpSelected !== today) { banner.style.display = 'none'; return; }
+    const entries = state.entries || [];
+    // "Real work" = anything that proves the user actually started today's shift.
+    // Empty drafts (autocreated phantom entries) don't count.
+    const todayHasRealWork = entries.some(e => {
+      if (e.date !== today) return false;
+      if (e.locked) return true;
+      if ((e.cash || 0) > 0 || (e.debit || 0) > 0 || (e.tips || 0) > 0) return true;
+      const hasInv = obj => obj && typeof obj === 'object' && Object.values(obj).some(v => (v || 0) > 0);
+      if (hasInv(e.morning) || hasInv(e.evening) || hasInv(e.meals)) return true;
+      if (Array.isArray(e.reloads) && e.reloads.some(hasInv)) return true;
+      if (Array.isArray(e.workers) && e.workers.some(w => w.worker || w.start || w.end)) return true;
+      return false;
+    });
+    if (todayHasRealWork) { banner.style.display = 'none'; return; }
+    // Find most recent unlocked-entry date prior to today
+    const priorDates = [...new Set(
+      entries.filter(e => !e.locked && e.date && e.date < today).map(e => e.date)
+    )].sort().reverse();
+    if (!priorDates.length) { banner.style.display = 'none'; return; }
+    const candidate = priorDates[0];
+    // Only auto-switch if within 3 days (avoid resurrecting ancient drafts)
+    const daysDiff = Math.floor((Date.parse(today) - Date.parse(candidate)) / 86400000);
+    if (daysDiff > 3 || daysDiff < 1) { banner.style.display = 'none'; return; }
+    const candidateCount = entries.filter(e => e.date === candidate && !e.locked).length;
+    // Switch the global date to the candidate
+    dpSelected = candidate;
+    $('global-date').value = candidate;
+    updateDateDisplay(candidate, true);
+    // Show banner
+    const [y, m, d] = candidate.split('-').map(Number);
+    const niceDate = MONTH_NAMES[m - 1] + ' ' + d;
+    text.innerHTML = `📋 Continuing your shift from <b>${niceDate}</b> — ${candidateCount} unfinished ${candidateCount === 1 ? 'cart' : 'carts'}. Tap the date above (or ✕) to start a new day.`;
+    banner.style.display = 'flex';
+  } catch (err) {
+    console.warn('maybeSwitchToContinueShift failed:', err);
+  }
+}
+function dismissContinueShiftBanner(){
+  const banner = $('continue-shift-banner');
+  if (banner) banner.style.display = 'none';
+  // User wants today; reset to today
+  const today = todayStamp();
+  dpSelected = today;
+  $('global-date').value = today;
+  updateDateDisplay(today, true);
+  if (typeof renderEntryView === 'function') renderEntryView();
+}
 function updateDateDisplay(dateStr, glow){
   const btn = $('date-display');
   if (!dateStr) { btn.textContent = 'Tap to set date'; }
@@ -2972,6 +3067,9 @@ $('dp-confirm').addEventListener('click', () => {
   localStorage.setItem(DATE_KEY, dpSelected);
   localStorage.setItem(DATE_CONFIRMED_KEY, todayStamp());
   updateDateDisplay(dpSelected, false);
+  // User has now made a deliberate date choice — hide the continue banner.
+  const banner = $('continue-shift-banner');
+  if (banner) banner.style.display = 'none';
   closeDatePicker();
   renderEntryView();
 });
@@ -2980,10 +3078,14 @@ $('dp-overlay').addEventListener('click', e => {
 });
 $('dp-sheet').addEventListener('click', e => e.stopPropagation());
 
+// Wire dismiss on the continue-shift banner
+$('continue-shift-dismiss')?.addEventListener('click', dismissContinueShiftBanner);
+
 //============================================================
 // INIT
 //============================================================
 initGlobalDate();
+maybeSwitchToContinueShift(); // run once on boot in case state already came from localStorage
 renderPrimaryTabs();
 renderSubTabs();
 renderEntryView();
