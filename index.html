@@ -1029,15 +1029,35 @@ function normalizeEntry(e) {
     if (!e.morningB  || typeof e.morningB  !== 'object') e.morningB  = {};
     if (!e.eveningB  || typeof e.eveningB  !== 'object') e.eveningB  = {};
     if (!e.mealsB    || typeof e.mealsB    !== 'object') e.mealsB    = {};
-    // Migrate reload1A/reload2A and reload1B/reload2B to arrays
+    // Migrate combo reload fields (reload0A, reload1A, reload2A, reload0B, ...) → reloadsA[]/reloadsB[]
+    // Two waves of legacy field shapes existed:
+    //   - reload1A/reload2A — old hardcoded two-slot version (1-indexed)
+    //   - reload0A/reload1A/... — buggy UI from infinite-reloads commit that wrote `reload${idx}A` for 0-indexed
+    // Both flow into reloadsA[]/reloadsB[] in numeric order, then get deleted from the entry.
     if (!Array.isArray(e.reloadsA)) e.reloadsA = [];
-    if (e.reload1A && typeof e.reload1A === 'object' && Object.keys(e.reload1A).length > 0) e.reloadsA.unshift(e.reload1A);
-    if (e.reload2A && typeof e.reload2A === 'object' && Object.keys(e.reload2A).length > 0) e.reloadsA.push(e.reload2A);
-    delete e.reload1A; delete e.reload2A;
     if (!Array.isArray(e.reloadsB)) e.reloadsB = [];
-    if (e.reload1B && typeof e.reload1B === 'object' && Object.keys(e.reload1B).length > 0) e.reloadsB.unshift(e.reload1B);
-    if (e.reload2B && typeof e.reload2B === 'object' && Object.keys(e.reload2B).length > 0) e.reloadsB.push(e.reload2B);
-    delete e.reload1B; delete e.reload2B;
+    const collectComboReloads = side => {
+      const sideKey = side; // 'A' or 'B'
+      const re = new RegExp(`^reload(\\d+)${sideKey}$`);
+      const found = [];
+      for (const k of Object.keys(e)) {
+        const m = k.match(re);
+        if (!m) continue;
+        const idx = parseInt(m[1], 10);
+        const obj = e[k];
+        if (obj && typeof obj === 'object' && Object.keys(obj).length > 0) {
+          found.push({ idx, obj });
+        }
+        delete e[k]; // always remove the legacy field after migration
+      }
+      found.sort((a, b) => a.idx - b.idx);
+      for (const { obj } of found) {
+        // De-dupe — don't append the exact same object reference twice
+        if (!e[`reloads${sideKey}`].some(r => r === obj)) e[`reloads${sideKey}`].push(obj);
+      }
+    };
+    collectComboReloads('A');
+    collectComboReloads('B');
     // Backfill comboCategoryA for legacy combo entries created before bidirectional combos
     if (!e.comboCategoryA) e.comboCategoryA = 'hotdog';
   }
@@ -1276,28 +1296,30 @@ function renderSubTabs(){
 // COMBO MODE
 //============================================================
 function activateComboMode(draft, categoryB, cartNameB) {
-  // Migrate originating-side fields to A-suffixed versions
+  // Migrate originating-side fields to A-suffixed versions (array shape).
   draft.morningA  = draft.morning  || {};
   draft.eveningA  = draft.evening  || {};
-  draft.reload1A  = draft.reload1  || {};
-  draft.reload2A  = draft.reload2  || {};
   draft.mealsA    = draft.meals    || {};
+  draft.reloadsA  = Array.isArray(draft.reloads) ? draft.reloads.slice() : [];
   // Initialise B-side fields
   draft.morningB  = {};
   draft.eveningB  = {};
-  draft.reload1B  = {};
-  draft.reload2B  = {};
   draft.mealsB    = {};
+  draft.reloadsB  = [];
   // Remove old unsuffixed inventory fields
   delete draft.morning; delete draft.evening;
   delete draft.reloads; delete draft.meals;
+  // Defensive: drop any legacy flat reload fields that may be hanging around
+  for (const k of Object.keys(draft)) {
+    if (/^reload\d+[AB]?$/.test(k)) delete draft[k];
+  }
   // Set combo metadata — remember original A-side category so we can restore on deactivate
   draft.comboCategoryA = draft.category;
   draft.comboCategoryB = categoryB;
   draft.comboCartB     = cartNameB;
   draft.category       = 'combo';
   // Reset expand state
-  reload1Open = false; reload2Open = false; mealsOpen = false;
+  expandedReloads.clear(); mealsOpen = false;
   save();
   renderEntryView();
 }
@@ -1307,17 +1329,19 @@ function deactivateComboMode(draft) {
   // Restore A-side fields back to plain (unsuffixed) form
   draft.morning  = draft.morningA  || {};
   draft.evening  = draft.eveningA  || {};
-  draft.reload1  = draft.reload1A  || {};
-  draft.reload2  = draft.reload2A  || {};
   draft.meals    = draft.mealsA    || {};
+  draft.reloads  = Array.isArray(draft.reloadsA) ? draft.reloadsA.slice() : [];
   // Restore original category (legacy combos that pre-date comboCategoryA fall back to hotdog)
   const restoredCat = draft.comboCategoryA || 'hotdog';
-  // Remove all combo fields
-  ['morningA','eveningA','reload1A','reload2A','mealsA',
-   'morningB','eveningB','reload1B','reload2B','mealsB',
+  // Remove all combo fields (including any legacy flat reload fields)
+  ['morningA','eveningA','mealsA','reloadsA',
+   'morningB','eveningB','mealsB','reloadsB',
    'comboCategoryA','comboCategoryB','comboCartB'].forEach(k => delete draft[k]);
+  for (const k of Object.keys(draft)) {
+    if (/^reload\d+[AB]?$/.test(k)) delete draft[k];
+  }
   draft.category = restoredCat;
-  reload1Open = false; reload2Open = false; mealsOpen = false;
+  expandedReloads.clear(); mealsOpen = false;
   save();
   renderEntryView();
 }
@@ -1348,7 +1372,8 @@ function getOrCreateDraft(){
       workers: [{ worker: '', start: '', end: '' }],
       morning: {},
       evening: {},
-      reload1: {}, reload2: {}, meals: {},
+      reloads: [],
+      meals: {},
       cash: 0, debit: 0, tips: 0,
       notes: '',
       locked: false,
@@ -1630,17 +1655,20 @@ function renderComboFormHTML(e) {
   }
 
   function comboReloadHTML(idx) {
-    const fieldA = `reload${idx}A`;
-    const fieldB = `reload${idx}B`;
+    // Use dotted path tokens so the input handler writes into reloadsA[idx]/reloadsB[idx]
+    // (not the legacy `reload${idx}A`/`reload${idx}B` flat fields, which were invisible to
+    // CSV/saved-card/price-scan readers — see audit P1.3 / P2.2).
+    const fieldA = `reloadsA.${idx}`;
+    const fieldB = `reloadsB.${idx}`;
     if (!expandedReloads.has(idx)) {
       return `<button type="button" class="add-optional-btn" data-reload-idx="${idx}">
         🔄 Add Reload #${idx + 1} (both carts)</button>`;
     }
     return `<div class="section reload-section">
       <h3 class="reload-header">🔄 Reload #${idx + 1} — ${catA.emoji} ${escapeHtml(cartNameA)}</h3>
-      ${invRowsHTML(itemsA, fieldA, e[fieldA])}
+      ${invRowsHTML(itemsA, fieldA, e.reloadsA?.[idx])}
       <h3 class="reload-header" style="margin-top:8px">🔄 Reload #${idx + 1} — ${catB.emoji} ${escapeHtml(e.comboCategoryB)}</h3>
-      ${invRowsHTML(itemsB, fieldB, e[fieldB])}
+      ${invRowsHTML(itemsB, fieldB, e.reloadsB?.[idx])}
       <div class="grand-total" style="border-color:#ff3b30">
         <span>Reload #${idx + 1} Combined</span>
         <span class="amount" id="combo-reload-grand-${idx}">$0.00</span>
@@ -1918,14 +1946,26 @@ function attachFormHandlers(draft){
     });
   }
 
-  // Combo inventory inputs (morningA, morningB, eveningA, eveningB, reload1A, etc.)
+  // Combo inventory inputs.
+  // Plain fields: morningA, morningB, eveningA, eveningB, mealsA, mealsB → e[field][item]
+  // Dotted array paths: reloadsA.0, reloadsB.2 → e.reloadsA[0][item], e.reloadsB[2][item]
   document.querySelectorAll('[data-combo-field]').forEach(inp => {
     inp.addEventListener('input', () => {
       const field = inp.dataset.comboField;
       const item  = inp.dataset.item;
       updateDraft(e => {
-        if (!e[field]) e[field] = {};
-        e[field][item] = num(inp.value);
+        const dot = field.indexOf('.');
+        if (dot === -1) {
+          if (!e[field] || typeof e[field] !== 'object') e[field] = {};
+          e[field][item] = num(inp.value);
+        } else {
+          const arrayKey = field.slice(0, dot);
+          const idx = parseInt(field.slice(dot + 1), 10);
+          if (!Array.isArray(e[arrayKey])) e[arrayKey] = [];
+          while (e[arrayKey].length <= idx) e[arrayKey].push({});
+          if (!e[arrayKey][idx] || typeof e[arrayKey][idx] !== 'object') e[arrayKey][idx] = {};
+          e[arrayKey][idx][item] = num(inp.value);
+        }
       });
       recalcAll();
     });
@@ -1954,19 +1994,19 @@ function recalcCombo(e) {
 
   const morningA   = sumField(itemsA, 'morningA',  e.morningA);
   const morningB   = sumField(itemsB, 'morningB',  e.morningB);
-  // Sum all reloads for side A
+  // Sum all reloads for side A. Field token = dotted path matching what the UI writes.
   let reloadA = 0;
-  (e.reloadsA || []).forEach((_, idx) => {
-    const field = `reload${idx}A`;
-    reloadA += expandedReloads.has(idx) ? sumField(itemsA, field, e[field]) :
-               itemsA.reduce((s,it)=>s+(e[field]?.[it.name]||0)*it.price, 0);
+  (e.reloadsA || []).forEach((dataObj, idx) => {
+    const field = `reloadsA.${idx}`;
+    reloadA += expandedReloads.has(idx) ? sumField(itemsA, field, dataObj) :
+               itemsA.reduce((s,it)=>s+(dataObj?.[it.name]||0)*it.price, 0);
   });
   // Sum all reloads for side B
   let reloadB = 0;
-  (e.reloadsB || []).forEach((_, idx) => {
-    const field = `reload${idx}B`;
-    reloadB += expandedReloads.has(idx) ? sumField(itemsB, field, e[field]) :
-               itemsB.reduce((s,it)=>s+(e[field]?.[it.name]||0)*it.price, 0);
+  (e.reloadsB || []).forEach((dataObj, idx) => {
+    const field = `reloadsB.${idx}`;
+    reloadB += expandedReloads.has(idx) ? sumField(itemsB, field, dataObj) :
+               itemsB.reduce((s,it)=>s+(dataObj?.[it.name]||0)*it.price, 0);
   });
   const mealsA     = mealsOpen   ? sumField(itemsA, 'mealsA',   e.mealsA)   :
                      itemsA.reduce((s,it)=>s+(e.mealsA?.[it.name]||0)*it.price, 0);
@@ -2518,10 +2558,12 @@ function entryRow(e){
     const aKey = e.comboCategoryA || 'hotdog';
     const itemsA = state.prices[aKey] || [];
     const itemsB = state.prices[e.comboCategoryB] || [];
-    morningTotal = ['morningA','reload1A','reload2A'].reduce((s,f)=>
-      s+itemsA.reduce((ss,it)=>ss+(e[f]?.[it.name]||0)*it.price,0),0)
-      + ['morningB','reload1B','reload2B'].reduce((s,f)=>
-      s+itemsB.reduce((ss,it)=>ss+(e[f]?.[it.name]||0)*it.price,0),0);
+    const sumItems = (items, dict) => items.reduce((s,it)=>s+(dict?.[it.name]||0)*it.price, 0);
+    const morningA = sumItems(itemsA, e.morningA);
+    const morningB = sumItems(itemsB, e.morningB);
+    const reloadsA_total = (e.reloadsA||[]).reduce((s, r) => s + sumItems(itemsA, r), 0);
+    const reloadsB_total = (e.reloadsB||[]).reduce((s, r) => s + sumItems(itemsB, r), 0);
+    morningTotal = morningA + morningB + reloadsA_total + reloadsB_total;
     leftoverTotal = itemsA.reduce((s,it)=>s+(e.eveningA?.[it.name]||0)*it.price,0)
                   + itemsB.reduce((s,it)=>s+(e.eveningB?.[it.name]||0)*it.price,0);
     mealsTotal    = itemsA.reduce((s,it)=>s+(e.mealsA?.[it.name]||0)*it.price,0)
@@ -2669,8 +2711,9 @@ function renderEntryCard(e){
   if (isCombo) {
     const itemsA = state.prices[e.comboCategoryA || 'hotdog'] || [];
     const itemsB = state.prices[e.comboCategoryB] || [];
-    const dispA = ['morningA','reload1A','reload2A'].reduce((s,f)=>s+itemsA.reduce((ss,it)=>ss+(e[f]?.[it.name]||0)*it.price,0),0);
-    const dispB = ['morningB','reload1B','reload2B'].reduce((s,f)=>s+itemsB.reduce((ss,it)=>ss+(e[f]?.[it.name]||0)*it.price,0),0);
+    const sumItems = (items, dict) => items.reduce((s,it)=>s+(dict?.[it.name]||0)*it.price, 0);
+    const dispA = sumItems(itemsA, e.morningA) + (e.reloadsA||[]).reduce((s,r)=>s+sumItems(itemsA, r), 0);
+    const dispB = sumItems(itemsB, e.morningB) + (e.reloadsB||[]).reduce((s,r)=>s+sumItems(itemsB, r), 0);
     morningTotal = dispA + dispB;
     leftoverTotal = itemsA.reduce((s,it)=>s+(e.eveningA?.[it.name]||0)*it.price,0)
                   + itemsB.reduce((s,it)=>s+(e.eveningB?.[it.name]||0)*it.price,0);
@@ -2887,18 +2930,25 @@ function updatePrice(cat, idx, value){
   if (newPrice === oldPrice) return;
 
   // Count how many saved entries reference this item — to show the user the blast radius
+  const dictHas = d => d && typeof d === 'object' && (d[item.name] || 0) > 0;
+  const arrHas  = arr => Array.isArray(arr) && arr.some(dictHas);
   const affected = state.entries.filter(e => {
     // Standalone inventory entry of this category
     if (e.category === cat) {
-      const fields = ['morning','evening','reload1','reload2','meals'];
-      if (fields.some(f => e[f] && e[f][item.name])) return true;
+      if (dictHas(e.morning) || dictHas(e.evening) || dictHas(e.meals)) return true;
+      if (arrHas(e.reloads)) return true;
     }
-    // Combo entry: hotdog A-side if cat==='hotdog', or B-side if cat===comboCategoryB
+    // Combo entry: A-side if cat===comboCategoryA (default 'hotdog'), B-side if cat===comboCategoryB
     if (e.category === 'combo') {
-      const aFields = ['morningA','eveningA','reload1A','reload2A','mealsA'];
-      const bFields = ['morningB','eveningB','reload1B','reload2B','mealsB'];
-      if (cat === 'hotdog' && aFields.some(f => e[f] && e[f][item.name])) return true;
-      if (cat === e.comboCategoryB && bFields.some(f => e[f] && e[f][item.name])) return true;
+      const aKey = e.comboCategoryA || 'hotdog';
+      if (cat === aKey) {
+        if (dictHas(e.morningA) || dictHas(e.eveningA) || dictHas(e.mealsA)) return true;
+        if (arrHas(e.reloadsA)) return true;
+      }
+      if (cat === e.comboCategoryB) {
+        if (dictHas(e.morningB) || dictHas(e.eveningB) || dictHas(e.mealsB)) return true;
+        if (arrHas(e.reloadsB)) return true;
+      }
     }
     return false;
   }).length;
