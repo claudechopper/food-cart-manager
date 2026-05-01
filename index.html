@@ -279,7 +279,12 @@
   .add-worker-btn {
     width: 100%; padding: 10px; font-size: 0.95rem; font-weight: 600;
     border: 2px dashed #007aff; background: transparent; color: #007aff;
-    border-radius: 10px; cursor: pointer; margin-top: 4px;
+    border-radius: 10px; cursor: pointer; margin-top: 4px; margin-bottom: 18px;
+  }
+  .add-optional-btn.meals-btn {
+    background: rgba(180,140,255,0.08);
+    border-color: #9b72cf;
+    color: #9b72cf;
   }
 
   /* settings */
@@ -548,21 +553,22 @@
   #sync-dot { font-size: 14px; line-height: 1; cursor: default; }
   .add-optional-btn {
     width: 100%;
-    padding: 10px 14px;
-    background: #1a1a2a;
-    border: 1px dashed #3a3a50;
+    padding: 10px;
+    background: rgba(150,150,150,0.12);
+    border: 1px dashed #888;
     border-radius: 10px;
-    color: #555;
-    font-size: 13px;
+    color: #777;
+    font-size: 0.95rem;
+    font-weight: 600;
     cursor: pointer;
-    text-align: left;
+    text-align: center;
     margin: 2px 0;
   }
   .reload-section { border-left: 3px solid #ff9500; padding-left: 10px; margin: 4px 0; }
   .reload-header { color: #ff9500; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
   .meals-section { border-left: 3px solid #f59e0b; padding-left: 10px; margin: 4px 0; }
   .meals-header { color: #f59e0b; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
-  .dispatched-total { background: #0e1a0e; border-color: #22c55e; margin-top: 4px; }
+  .dispatched-total { background: rgba(34,197,94,0.1); border-color: #22c55e; margin-top: 4px; }
   .combo-active-bar {
     display: flex;
     align-items: center;
@@ -585,8 +591,7 @@
     <h1>🍦 Food Cart Manager</h1>
     <div class="icons">
       <span id="sync-dot" title="Cloud sync status" style="display:none;cursor:pointer" onclick="if(lastSyncError)alert(lastSyncError);else alert('Last synced OK at '+(lastSyncedAt||'never'));"></span>
-      <button class="icon-btn" id="icon-export" title="Export">💾</button>
-      <button class="icon-btn" id="icon-saved" title="Saved entries">📋</button>
+<button class="icon-btn" id="icon-saved" title="Saved entries">📋</button>
       <button class="icon-btn" id="icon-settings" title="Settings">⚙️</button>
     </div>
   </div>
@@ -730,8 +735,7 @@ const CLOUD_HEADERS = {
 let lastSyncedAt = null;
 let initialPullDone = false; // Block pushes until we've pulled once
 // ── Reload / Meals expand state (reset on cart navigation) ──
-let reload1Open = false;
-let reload2Open = false;
+let expandedReloads = new Set(); // indices of expanded reload sections
 let mealsOpen   = false;
 // ──────────────────────────────────────────────────────────────
 
@@ -864,22 +868,34 @@ function normalizeEntry(e) {
   if (HAS_INVENTORY(e.category)) {
     if (!e.morning || typeof e.morning !== 'object') e.morning = {};
     if (!e.evening || typeof e.evening !== 'object') e.evening = {};
-    if (!e.reload1 || typeof e.reload1 !== 'object') e.reload1 = {};
-    if (!e.reload2 || typeof e.reload2 !== 'object') e.reload2 = {};
     if (!e.meals  || typeof e.meals  !== 'object') e.meals  = {};
+    // Migrate reload1/reload2 to reloads array (backward compat)
+    if (!Array.isArray(e.reloads)) e.reloads = [];
+    if (e.reload1 && typeof e.reload1 === 'object' && Object.keys(e.reload1).length > 0 && !e.reloads.some(r => r === e.reload1)) {
+      e.reloads.unshift(e.reload1);
+    }
+    if (e.reload2 && typeof e.reload2 === 'object' && Object.keys(e.reload2).length > 0 && !e.reloads.some(r => r === e.reload2)) {
+      e.reloads.push(e.reload2);
+    }
+    delete e.reload1; delete e.reload2;
   }
   // Ensure combo fields exist for combo entries
   if (e.category === 'combo') {
     if (!e.morningA  || typeof e.morningA  !== 'object') e.morningA  = {};
     if (!e.eveningA  || typeof e.eveningA  !== 'object') e.eveningA  = {};
-    if (!e.reload1A  || typeof e.reload1A  !== 'object') e.reload1A  = {};
-    if (!e.reload2A  || typeof e.reload2A  !== 'object') e.reload2A  = {};
     if (!e.mealsA    || typeof e.mealsA    !== 'object') e.mealsA    = {};
     if (!e.morningB  || typeof e.morningB  !== 'object') e.morningB  = {};
     if (!e.eveningB  || typeof e.eveningB  !== 'object') e.eveningB  = {};
-    if (!e.reload1B  || typeof e.reload1B  !== 'object') e.reload1B  = {};
-    if (!e.reload2B  || typeof e.reload2B  !== 'object') e.reload2B  = {};
     if (!e.mealsB    || typeof e.mealsB    !== 'object') e.mealsB    = {};
+    // Migrate reload1A/reload2A and reload1B/reload2B to arrays
+    if (!Array.isArray(e.reloadsA)) e.reloadsA = [];
+    if (e.reload1A && typeof e.reload1A === 'object' && Object.keys(e.reload1A).length > 0) e.reloadsA.unshift(e.reload1A);
+    if (e.reload2A && typeof e.reload2A === 'object' && Object.keys(e.reload2A).length > 0) e.reloadsA.push(e.reload2A);
+    delete e.reload1A; delete e.reload2A;
+    if (!Array.isArray(e.reloadsB)) e.reloadsB = [];
+    if (e.reload1B && typeof e.reload1B === 'object' && Object.keys(e.reload1B).length > 0) e.reloadsB.unshift(e.reload1B);
+    if (e.reload2B && typeof e.reload2B === 'object' && Object.keys(e.reload2B).length > 0) e.reloadsB.push(e.reload2B);
+    delete e.reload1B; delete e.reload2B;
   }
   if (!Array.isArray(e.workers)) e.workers = [{ worker: '', start: '', end: '' }];
 }
@@ -1014,7 +1030,6 @@ function showView(v){
 }
 $('icon-saved').addEventListener('click', () => showView(activeView === 'saved' ? 'entry' : 'saved'));
 $('icon-settings').addEventListener('click', () => showView(activeView === 'settings' ? 'entry' : 'settings'));
-$('icon-export').addEventListener('click', () => showView(activeView === 'saved' ? 'entry' : 'saved'));
 
 //============================================================
 // PRIMARY + SECONDARY TABS
@@ -1029,7 +1044,7 @@ function renderPrimaryTabs(){
     btn.onclick = () => {
       activeCategory = c.key;
       activeCartIdx = 0;
-      reload1Open = false; reload2Open = false; mealsOpen = false;
+      expandedReloads.clear(); mealsOpen = false;
       showView('entry');
       renderPrimaryTabs();
       renderSubTabs();
@@ -1061,7 +1076,7 @@ function renderSubTabs(){
     btn.title = cart;
     btn.onclick = () => {
       activeCartIdx = i;
-      reload1Open = false; reload2Open = false; mealsOpen = false;
+      expandedReloads.clear(); mealsOpen = false;
       renderSubTabs();
       renderEntryView();
     };
@@ -1177,13 +1192,18 @@ function renderEntryView(){
   if (_draft) {
     if (_draft.category === 'combo') {
       const anyHas = (...fields) => fields.some(f => Object.values(_draft[f] || {}).some(v => v > 0));
-      if (anyHas('reload1A','reload1B')) reload1Open = true;
-      if (anyHas('reload2A','reload2B')) reload2Open = true;
-      if (anyHas('mealsA','mealsB'))     mealsOpen   = true;
+      (_draft.reloadsA || []).forEach((r, idx) => {
+        if (Object.values(r || {}).some(v => v > 0)) expandedReloads.add(idx);
+      });
+      (_draft.reloadsB || []).forEach((r, idx) => {
+        if (Object.values(r || {}).some(v => v > 0)) expandedReloads.add(idx);
+      });
+      if (anyHas('mealsA','mealsB')) mealsOpen = true;
     } else {
-      if (Object.values(_draft.reload1 || {}).some(v => v > 0)) reload1Open = true;
-      if (Object.values(_draft.reload2 || {}).some(v => v > 0)) reload2Open = true;
-      if (Object.values(_draft.meals   || {}).some(v => v > 0)) mealsOpen   = true;
+      (_draft.reloads || []).forEach((r, idx) => {
+        if (Object.values(r || {}).some(v => v > 0)) expandedReloads.add(idx);
+      });
+      if (Object.values(_draft.meals || {}).some(v => v > 0)) mealsOpen = true;
     }
   }
   const color = colorFor(activeCategory, activeCartIdx);
@@ -1283,24 +1303,25 @@ function renderFormHTML(e){
           <div class="total" data-reload-total="${field}-${escapeHtml(it.name)}">$0.00</div>
         </div>`).join('');
     }
-    function reloadSectionHTML(num, field, label) {
-      if ((num === 1 && !reload1Open) || (num === 2 && !reload2Open)) {
-        return `<button type="button" class="add-optional-btn" id="add-reload${num}-btn">
-          🔄 Add Reload #${num}</button>`;
+    function reloadSectionHTML(idx) {
+      const field = `reload_${idx}`;
+      if (!expandedReloads.has(idx)) {
+        return `<button type="button" class="add-optional-btn" data-reload-idx="${idx}">
+          🔄 Add Reload #${idx + 1}</button>`;
       }
       return `<div class="section reload-section">
-        <h3 class="reload-header">🔄 ${label}</h3>
+        <h3 class="reload-header">🔄 Reload #${idx + 1}</h3>
         ${reloadRowsHTML(field)}
         <div class="grand-total" style="border-color:#ff9500">
-          <span>Reload #${num} Total</span>
-          <span class="amount" id="reload${num}-grand">$0.00</span>
+          <span>Reload #${idx + 1} Total</span>
+          <span class="amount" id="reload-grand-${idx}">$0.00</span>
         </div>
       </div>`;
     }
     // ── Meals row builder ────────────────────────────────────
     function mealsSectionHTML() {
       if (!mealsOpen) {
-        return `<button type="button" class="add-optional-btn" id="add-meals-btn">
+        return `<button type="button" class="add-optional-btn meals-btn" id="add-meals-btn">
           🍽️ Employee Meals</button>`;
       }
       const mealRows = items.map(it => `
@@ -1315,7 +1336,7 @@ function renderFormHTML(e){
         <h3 class="meals-header">🍽️ Employee Meals</h3>
         ${mealRows}
         <div class="grand-total" style="border-color:#f59e0b">
-          <span>Meals Total (deducted)</span>
+          <span>Meals Total <span style="font-size:0.85rem;font-weight:400;color:#888">(minused from end of day automatically)</span></span>
           <span class="amount" id="meals-grand">$0.00</span>
         </div>
       </div>`;
@@ -1330,8 +1351,9 @@ function renderFormHTML(e){
           <span class="amount" id="morning-grand">$0.00</span>
         </div>
       </div>
-      ${reloadSectionHTML(1, 'reload1', 'Reload #1')}
-      ${reloadSectionHTML(2, 'reload2', 'Reload #2')}
+      ${(e.reloads || []).map((_, idx) => reloadSectionHTML(idx)).join('')}
+      <button type="button" class="add-optional-btn" id="add-new-reload-btn">
+        🔄 ➕ Add Another Reload</button>
       ${mealsSectionHTML()}
       <div class="grand-total dispatched-total">
         <span>⬆ Total Dispatched</span>
@@ -1422,7 +1444,7 @@ function renderComboFormHTML(e) {
 
   function comboMealsHTML() {
     if (!mealsOpen) {
-      return `<button type="button" class="add-optional-btn" id="add-meals-btn">
+      return `<button type="button" class="add-optional-btn meals-btn" id="add-meals-btn">
         🍽️ Employee Meals</button>`;
     }
     return `<div class="section meals-section">
@@ -1621,11 +1643,27 @@ function attachFormHandlers(draft){
     });
   });
 
-  // Reload / Meals expand buttons
-  const r1Btn = $('add-reload1-btn');
-  if (r1Btn) r1Btn.addEventListener('click', () => { reload1Open = true; renderEntryView(); });
-  const r2Btn = $('add-reload2-btn');
-  if (r2Btn) r2Btn.addEventListener('click', () => { reload2Open = true; renderEntryView(); });
+  // Reload / Meals expand buttons (event delegation for dynamic reload buttons)
+  document.addEventListener('click', (ev) => {
+    const reloadBtn = ev.target.closest('[data-reload-idx]');
+    if (reloadBtn) {
+      const idx = parseInt(reloadBtn.dataset.reloadIdx);
+      if (expandedReloads.has(idx)) expandedReloads.delete(idx);
+      else {
+        expandedReloads.add(idx);
+        // Ensure reloads array has this index
+        while (_draft.reloads.length <= idx) _draft.reloads.push({});
+      }
+      renderEntryView();
+    }
+    if (ev.target.id === 'add-new-reload-btn') {
+      _draft.reloads = _draft.reloads || [];
+      const newIdx = _draft.reloads.length;
+      _draft.reloads.push({});
+      expandedReloads.add(newIdx);
+      renderEntryView();
+    }
+  });
   const mBtn = $('add-meals-btn');
   if (mBtn) mBtn.addEventListener('click', () => { mealsOpen = true; renderEntryView(); });
 
@@ -2909,8 +2947,8 @@ const TOUR_STEPS = [
   },
   {
     selector: '.header .icons',
-    title: '💾 📋 ⚙️ Top-right icons',
-    body: '<b>💾</b> — download all entries as CSV<br><b>📋 Saved</b> — search and view every past entry<br><b>⚙️ Settings</b> — manage workers, locations, cart names, and <b>edit item prices</b><br><br>You\'re all set — hit <b>Done</b> 🎉',
+    title: '📋 ⚙️ Top-right icons',
+    body: '<b>📋 Saved</b> — search and view every past entry<br><b>⚙️ Settings</b> — manage workers, locations, cart names, and <b>edit item prices</b><br><br>You\'re all set — hit <b>Done</b> 🎉',
   },
 ];
 
