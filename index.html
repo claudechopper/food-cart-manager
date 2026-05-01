@@ -2927,6 +2927,13 @@ function wireWageInputsIn(scopeEl, onSaved) {
       save();
       if (typeof onSaved === 'function') onSaved();
     });
+    // Enter/Return commits the value (just calls blur — single save path).
+    inp.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        inp.blur();
+      }
+    });
   });
 }
 function renderCartNameEditor(){
