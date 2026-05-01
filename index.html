@@ -2458,27 +2458,9 @@ function wirePayrollHandlers(allShifts){
     });
   });
 
-  // Wage inputs — eye toggle + save on blur
-  document.querySelectorAll('.wage-input').forEach(inp => {
-    const eyeBtn = inp.nextElementSibling;
-    eyeBtn.addEventListener('click', () => {
-      if (inp.type === 'password') {
-        inp.type = 'text';
-        inp.focus();
-        inp.select();
-      } else {
-        inp.type = 'password';
-      }
-    });
-    inp.addEventListener('blur', () => {
-      const v = parseFloat(inp.value);
-      if (!state.wages) state.wages = {};
-      state.wages[inp.dataset.worker] = (isNaN(v) || v < 0) ? 0 : Math.round(v * 100) / 100;
-      inp.type = 'password';
-      save();
-      renderPayroll();
-    });
-  });
+  // Wage inputs — eye toggle + save on blur. Re-render payroll on save so
+  // owed-dollar totals update.
+  wireWageInputsIn($('view-payroll'), renderPayroll);
 
   // Pay selected (bulk checkbox) button — confirms with worker breakdown + total hours
   const payBtn = $('btn-pay-selected');
@@ -2888,12 +2870,64 @@ function renderList(elId, key){
     el.innerHTML = '<div class="empty" style="padding:14px">None yet</div>';
     return;
   }
+  // Workers get an inline hourly-rate input (hidden by default, eye to reveal).
+  // Same storage as Payroll (state.wages[name]) so the two screens stay in sync.
+  if (key === 'workers') {
+    el.innerHTML = state[key].map((name, i) => {
+      const wage = (state.wages && state.wages[name]) || 0;
+      return `<div class="settings-row" style="flex-wrap:wrap;gap:8px">
+         <div class="name" style="flex:1 1 auto;min-width:120px">${escapeHtml(name)}</div>
+         <div class="wage-dollar-wrap" style="flex:0 0 auto">
+           <span class="wage-dollar-sign">$</span>
+           <input type="password" class="wage-input" inputmode="decimal"
+             data-worker="${escapeHtml(name)}"
+             value="${wage || ''}"
+             placeholder="••••"
+             style="width:80px">
+           <button class="wage-eye-btn" title="Show/hide hourly rate" type="button">👁</button>
+           <span style="font-size:0.78rem;color:#666;margin-left:4px">/hr</span>
+         </div>
+         <button class="x" onclick="removeItem('${key}',${i})" title="Remove">✕</button>
+       </div>`;
+    }).join('');
+    wireWageInputsIn(el);
+    return;
+  }
   el.innerHTML = state[key].map((v,i) =>
     `<div class="settings-row">
        <div class="name">${escapeHtml(v)}</div>
        <button class="x" onclick="removeItem('${key}',${i})" title="Remove">✕</button>
      </div>`
   ).join('');
+}
+
+// Shared wage-input wiring used by both Payroll and Settings → Workers.
+// Scope to the rendering view so we don't bind duplicate listeners on
+// nodes from another view that's already rendered.
+function wireWageInputsIn(scopeEl, onSaved) {
+  if (!scopeEl) return;
+  scopeEl.querySelectorAll('.wage-input').forEach(inp => {
+    const eyeBtn = inp.nextElementSibling;
+    if (eyeBtn && eyeBtn.classList.contains('wage-eye-btn')) {
+      eyeBtn.addEventListener('click', () => {
+        if (inp.type === 'password') {
+          inp.type = 'text';
+          inp.focus();
+          inp.select();
+        } else {
+          inp.type = 'password';
+        }
+      });
+    }
+    inp.addEventListener('blur', () => {
+      const v = parseFloat(inp.value);
+      if (!state.wages) state.wages = {};
+      state.wages[inp.dataset.worker] = (isNaN(v) || v < 0) ? 0 : Math.round(v * 100) / 100;
+      inp.type = 'password';
+      save();
+      if (typeof onSaved === 'function') onSaved();
+    });
+  });
 }
 function renderCartNameEditor(){
   const wrap = $('cart-name-editor');
@@ -3037,8 +3071,11 @@ function addItem(key, inputId){
   renderSettings();
 }
 function removeItem(key, i){
-  if (!confirm('Remove "'+state[key][i]+'"?')) return;
+  const name = state[key][i];
+  if (!confirm('Remove "'+name+'"?')) return;
   state[key].splice(i,1);
+  // Drop the saved hourly rate when a worker is removed (no orphan wage data).
+  if (key === 'workers' && state.wages) delete state.wages[name];
   save();
   renderSettings();
 }
