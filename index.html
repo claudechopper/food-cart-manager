@@ -2714,6 +2714,25 @@ function fmtDateTime(isoStr){
   return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}) +
     ' · ' + d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
 }
+// Friendly day from a YYYY-MM-DD string (parsed in local time, NOT UTC,
+// so "2026-04-30" never accidentally renders as April 29 in negative TZs).
+function fmtDateFromYMD(ymd){
+  if (!ymd) return '';
+  const [y, m, d] = ymd.split('-').map(Number);
+  if (!y || !m || !d) return ymd;
+  return new Date(y, m-1, d).toLocaleDateString('en-US',
+    {weekday:'short', month:'short', day:'numeric', year:'numeric'});
+}
+// "Apr 30" — used for inline "(saved on May 1)" hints.
+function fmtShortDay(d){
+  return d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+}
+// YYYY-MM-DD in LOCAL time (matches todayStamp() so day comparisons work).
+function ymdLocal(d){
+  return d.getFullYear() + '-' +
+    String(d.getMonth()+1).padStart(2,'0') + '-' +
+    String(d.getDate()).padStart(2,'0');
+}
 
 function toggleSaveGroup(key){
   if (expandedSaves.has(key)) expandedSaves.delete(key);
@@ -2770,14 +2789,27 @@ function renderEntryCard(e){
   } else {
     inv = `<div class="meta">💵 Cash ${fmt(e.cash)} + Debit ${fmt(e.debit)}</div>`;
   }
+  // Show the chosen work date as the primary date label. Only annotate
+  // "(saved on ...)" when the lock happened on a DIFFERENT calendar day,
+  // so day-of locks stay clean.
+  const dateLabel = fmtDateFromYMD(e.date);
+  let savedOnHint = '';
+  if (e.locked && e.lockedAt) {
+    const lockDay = ymdLocal(new Date(e.lockedAt));
+    if (lockDay && lockDay !== e.date) {
+      savedOnHint = ` <span style="color:#666;font-weight:500;font-style:italic">(saved on ${escapeHtml(fmtShortDay(new Date(e.lockedAt)))})</span>`;
+    }
+  }
   return `<div class="card">
     <h3>${cat.emoji} ${displayCart} ${isCombo ? '<span class="pill" style="background:#ff9500">COMBO</span>' : ''} ${e.locked ? '<span class="pill">LOCKED</span>' : '<span class="pill" style="background:#ff9500">DRAFT</span>'}</h3>
+    <div class="meta" style="font-weight:700;color:#333">📅 ${escapeHtml(dateLabel)}${savedOnHint}</div>
     <div class="meta">📍 ${escapeHtml(e.location || '—')}</div>
     <div class="meta">👤 ${workers || '—'}</div>
     ${inv}
     <div class="meta">💰 Tips ${fmt(e.tips)}</div>
     ${e.notes ? `<div class="meta" style="margin-top:6px">📝 ${escapeHtml(e.notes)}</div>`:''}
-    <div style="display:flex;gap:8px;margin-top:10px">
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+      ${e.locked ? `<button class="btn small" onclick="editLockedEntry('${e.id}')">✎ Edit</button>` : ''}
       <button class="btn small danger" onclick="deleteEntry('${e.id}')">Delete</button>
     </div>
   </div>`;
@@ -2863,6 +2895,52 @@ document.addEventListener('change', e => {
   if (e.target && e.target.id === 'filter-date') renderSaved();
 });
 $('btn-clear-filter').addEventListener('click', () => { $('filter-date').value=''; renderSaved(); });
+
+// Unlock a locked entry and jump straight to its date/category/cart so
+// the user can edit and re-lock. Original lockedAt is dropped so the
+// entry leaves its old save group; re-locking creates a fresh group.
+function editLockedEntry(id){
+  const entry = state.entries.find(e => e.id === id);
+  if (!entry) return;
+  const isCombo = entry.category === 'combo';
+  const emoji = isCombo
+    ? '🔀'
+    : (CATEGORIES.find(c=>c.key===entry.category)?.emoji || '🚚');
+  const cartLabel = isCombo
+    ? `${entry.cart} + ${entry.comboCartB || ''}`
+    : entry.cart;
+  const msg = `Unlock this entry to edit it?\n\n${emoji} ${cartLabel}\n📅 ${fmtDateFromYMD(entry.date)}\n\nIt will move out of its saved group and back into the daily entry view. Tap 🔒 Lock & Save when you're done.`;
+  if (!confirm(msg)) return;
+
+  entry.locked = false;
+  delete entry.lockedAt;
+
+  // Switch global date to the entry's actual work date
+  if (typeof dpSelected !== 'undefined') dpSelected = entry.date;
+  const gd = $('global-date');
+  if (gd) gd.value = entry.date;
+  try {
+    localStorage.setItem(DATE_KEY, entry.date);
+    localStorage.setItem(DATE_CONFIRMED_KEY, todayStamp());
+  } catch(_){}
+  updateDateDisplay(entry.date, false);
+
+  // Switch to the entry's category. For combo, navigate to the A-side
+  // category since that's where the combo originated.
+  const targetCat = isCombo ? (entry.comboCategoryA || 'hotdog') : entry.category;
+  if (state.carts[targetCat]) {
+    activeCategory = targetCat;
+    const idx = state.carts[targetCat].indexOf(entry.cart);
+    activeCartIdx = idx >= 0 ? idx : 0;
+  }
+
+  save();
+  showView('entry');
+  if (typeof renderPrimaryTabs === 'function') renderPrimaryTabs();
+  if (typeof renderSubTabs === 'function') renderSubTabs();
+  renderEntryView();
+  toast('🔓 Unlocked — edit, then 🔒 Lock & Save when done');
+}
 
 function deleteEntry(id){
   const entry = state.entries.find(e => e.id === id);
