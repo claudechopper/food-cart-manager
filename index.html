@@ -1829,38 +1829,28 @@ function recalcAll(){
     });
     const mg = $('morning-grand'); if (mg) mg.textContent = fmt(morningTotal);
 
-    // Reload 1
-    let reload1Total = 0;
-    if (reload1Open) {
-      items.forEach(it => {
-        const inp = document.querySelector(`[data-reload="reload1"][data-item="${cssEscape(it.name)}"]`);
-        const cnt = inp ? num(inp.value) : 0;
-        const total = cnt * it.price;
-        reload1Total += total;
-        const cell = document.querySelector(`[data-reload-total="reload1-${cssEscape(it.name)}"]`);
-        if (cell) cell.textContent = fmt(total);
-      });
-      const r1g = $('reload1-grand'); if (r1g) r1g.textContent = fmt(reload1Total);
-    } else if (draft) {
-      // Not expanded but data may exist (auto-expanded on load)
-      items.forEach(it => { reload1Total += (draft.reload1?.[it.name] || 0) * it.price; });
-    }
-
-    // Reload 2
-    let reload2Total = 0;
-    if (reload2Open) {
-      items.forEach(it => {
-        const inp = document.querySelector(`[data-reload="reload2"][data-item="${cssEscape(it.name)}"]`);
-        const cnt = inp ? num(inp.value) : 0;
-        const total = cnt * it.price;
-        reload2Total += total;
-        const cell = document.querySelector(`[data-reload-total="reload2-${cssEscape(it.name)}"]`);
-        if (cell) cell.textContent = fmt(total);
-      });
-      const r2g = $('reload2-grand'); if (r2g) r2g.textContent = fmt(reload2Total);
-    } else if (draft) {
-      items.forEach(it => { reload2Total += (draft.reload2?.[it.name] || 0) * it.price; });
-    }
+    // All reloads (dynamic)
+    let reloadTotals = {};
+    (draft?.reloads || []).forEach((_, idx) => {
+      let total = 0;
+      const fieldName = `reload_${idx}`;
+      if (expandedReloads.has(idx)) {
+        items.forEach(it => {
+          const inp = document.querySelector(`[data-reload="${fieldName}"][data-item="${cssEscape(it.name)}"]`);
+          const cnt = inp ? num(inp.value) : 0;
+          const t = cnt * it.price;
+          total += t;
+          const cell = document.querySelector(`[data-reload-total="${fieldName}-${cssEscape(it.name)}"]`);
+          if (cell) cell.textContent = fmt(t);
+        });
+        const rg = $(`reload-grand-${idx}`); if (rg) rg.textContent = fmt(total);
+      } else if (draft) {
+        items.forEach(it => { total += (draft.reloads[idx]?.[it.name] || 0) * it.price; });
+      }
+      reloadTotals[idx] = total;
+    });
+    const reload1Total = reloadTotals[0] || 0;
+    const reload2Total = reloadTotals[1] || 0;
 
     // Meals
     let mealsTotal = 0;
@@ -1890,7 +1880,8 @@ function recalcAll(){
     });
     const lg = $('leftover-grand'); if (lg) lg.textContent = fmt(leftoverTotal);
 
-    const totalDispatched = morningTotal + reload1Total + reload2Total;
+    const totalReloads = Object.values(reloadTotals).reduce((a,b) => a + b, 0);
+    const totalDispatched = morningTotal + totalReloads;
     const dg = $('dispatched-grand'); if (dg) dg.textContent = fmt(totalDispatched);
 
     const cash  = num(document.querySelector('[data-field="cash"]')?.value);
